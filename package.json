@@ -1,0 +1,71 @@
+{
+  "name": "particle-charts",
+  "version": "0.1.0",
+  "description": "Data visualisation made of particles \u2014 line, area, bar, pie and donut charts rendered as clouds of light. Zero dependencies.",
+  "keywords": [
+    "charts",
+    "particles",
+    "canvas",
+    "dataviz",
+    "visualization",
+    "line-chart",
+    "bar-chart",
+    "pie-chart",
+    "donut-chart"
+  ],
+  "homepage": "https://bwilliford.github.io/particleCharts/",
+  "bugs": {
+    "url": "https://github.com/bwilliford/particleCharts/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bwilliford/particleCharts.git"
+  },
+  "license": "MIT",
+  "author": "Blake Williford",
+  "type": "module",
+  "main": "./dist/particle-charts.cjs",
+  "module": "./src/index.js",
+  "browser": "./dist/particle-charts.js",
+  "types": "./index.d.ts",
+  "unpkg": "./dist/particle-charts.min.js",
+  "jsdelivr": "./dist/particle-charts.min.js",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./src/index.js",
+      "require": "./dist/particle-charts.cjs",
+      "default": "./src/index.js"
+    },
+    "./dist/*": "./dist/*",
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "index.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "node scripts/build.js",
+    "test": "node scripts/test.js",
+    "typecheck": "tsc --noEmit --strict --skipLibCheck index.d.ts",
+    "start": "npm run build && node scripts/serve.js",
+    "version": "node scripts/sync-version.js",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

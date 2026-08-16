@@ -89,7 +89,9 @@ out
 
 # Nuxt.js build / generate output
 .nuxt
-dist
+# dist/ is committed: index.html loads the UMD build directly, so the demo
+# works from a clone with no build step.
+!dist
 
 # Gatsby files
 .cache/
@@ -134,3 +136,6 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# macOS
+.DS_Store

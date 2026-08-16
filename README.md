@@ -1,2 +1,329 @@
-# particleCharts
+# Particle Charts
 
+Data visualisation made of particles. Line, area, bar, pie and donut charts
+rendered as living clouds of light on a `<canvas>`, driven by plain JSON.
+
+Zero runtime dependencies. One file — **17 kB minified + gzipped**. Responsive,
+accessible and typed.
+
+```js
+new ParticleChart('#chart', {
+  type: 'line',
+  data: [12, 19, 15, 27, 24, 33]
+});
+```
+
+**[Live demo →](https://bwilliford.github.io/particleCharts/)** · or open
+`index.html` from a clone, or `npm start` to serve it on
+<http://localhost:4173>.
+
+---
+
+## Install
+
+**CDN** — nothing to configure, no build step, works over `file://` too:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/particle-charts@0/dist/particle-charts.min.js"></script>
+
+<div id="chart" style="height: 320px"></div>
+<script>
+  new ParticleCharts.ParticleChart('#chart', {
+    type: 'bar',
+    data: { labels: ['Q1', 'Q2', 'Q3', 'Q4'], values: [42, 58, 51, 73] }
+  });
+</script>
+```
+
+unpkg works the same way: `https://unpkg.com/particle-charts@0/dist/particle-charts.min.js`.
+Drop the `.min` for the readable build. Pin an exact version (`@0.1.0`) in
+production rather than a range.
+
+**npm** — ES module source is shipped as-is, with TypeScript declarations:
+
+```bash
+npm install particle-charts
+```
+
+```js
+import { ParticleChart, donut } from 'particle-charts';
+
+const chart = new ParticleChart(element, { type: 'donut', data });
+donut(element, { Direct: 4820, Search: 3140 }); // shorthand
+```
+
+CommonJS resolves to the UMD build, so `require` works too:
+
+```js
+const { ParticleChart } = require('particle-charts');
+```
+
+| File | Use |
+|---|---|
+| `dist/particle-charts.min.js` | CDN / `<script>` — 17 kB gzipped |
+| `dist/particle-charts.js` | same, unminified, for debugging |
+| `dist/particle-charts.cjs` | `require()` |
+| `src/index.js` | `import` — what bundlers get |
+| `index.d.ts` | TypeScript |
+
+The container needs a height. The chart fills it and re-lays out whenever it
+changes.
+
+---
+
+## Data
+
+Everything is normalised into `{ labels, series }`, so all of these work:
+
+```js
+data: [4, 8, 15, 16, 23, 42]                              // bare numbers
+data: [{ label: 'Jan', value: 4 }, { label: 'Feb', value: 8 }]
+data: { labels: ['Jan', 'Feb'], values: [4, 8] }
+data: { Chrome: 62, Safari: 19, Firefox: 11 }             // a plain record
+data: {                                                    // multi-series
+  labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+  series: [
+    { name: 'Revenue', data: [42, 58, 51, 73], color: '#3987e5' },
+    { name: 'Costs',   data: [30, 33, 36, 41] }
+  ]
+}
+data: { series: [{ name: 'Load', data: [{ x: 0, y: 12 }, { x: 5, y: 19 }] }] }
+```
+
+`null`, `undefined` and unparseable values become gaps: a line breaks at them,
+a bar is simply not drawn.
+
+When every x value is numeric, line charts switch to a continuous x axis
+automatically. Otherwise the labels are treated as categories.
+
+---
+
+## Chart types
+
+| `type` | Notes |
+|---|---|
+| `line` | Monotone-cubic smoothing by default; never overshoots the data. |
+| `area` | The same chart with the fill under the curve turned on. |
+| `bar` | Grouped by default; `stacked: true` and `horizontal: true` available. |
+| `pie` | Reads the first series; each category gets its own colour slot. |
+| `donut` | `pie` with `innerRadius: 0.62` and a running total in the hole. |
+
+---
+
+## Options
+
+Nested groups (`particle`, `axis`, `legend`, `line`, `bar`, `pie`) can be set
+either way — `{ particleBloom: 0.8 }` and `{ particle: { bloom: 0.8 } }` are the
+same thing, and the nested form wins if you write both.
+
+### Core
+
+| Option | Default | Description |
+|---|---|---|
+| `type` | `'line'` | `line`, `area`, `bar`, `pie`, `donut`. |
+| `data` | — | See above. |
+| `background` | `'transparent'` | Canvas fill painted behind the particles. |
+| `padding` | auto | Number, `[y, x]`, or `{top, right, bottom, left}`. Left alone, it is measured from the axis labels actually drawn. |
+| `responsive` | `true` | Re-layout on container resize. |
+| `maxDpr` | `2` | Cap on the HiDPI backing store. |
+| `pauseWhenHidden` | `true` | Stop the loop when the tab hides or the chart scrolls out of view. |
+| `animate` | `true` | Entrance flight. |
+| `duration` | `1100` | Entrance duration, ms. |
+| `stagger` | `0.5` | 0–1, how much of the entrance is spread across particles. |
+
+### Particles
+
+| Option | Default | Description |
+|---|---|---|
+| `particleColor` | palette | A colour, an array of colours, or `fn(index, series)`. |
+| `particleSize` | `0.5` | Particle radius in CSS pixels. At or below 1.6 particles are drawn as pixel-snapped rects — crisp, and much cheaper than sprites. |
+| `particleSizeJitter` | `0` | 0–1 random size spread. `0` keeps every particle identical. |
+| `particleDensity` | `15` | Multiplier on the auto-computed budget. |
+| `particleCount` | `50000` | Hard ceiling, whatever the density. |
+| `particleBloom` | `0.3` | Additive glow strength, 0–1. |
+| `particleOpacity` | `0.7` | Global particle alpha. Kept under 1 so additive stacking does not clip hues to white. |
+| `particleJitter` | `0.5` | Idle drift amplitude in pixels. |
+| `particleSpeed` | `0.085` | Spring stiffness toward the target. |
+| `particleTrail` | `0` | Motion-blur persistence, 0–0.9. |
+| `particleShape` | `'soft'` | Particles are circles; `soft` adds a glow sprite once they are large enough for the halo to read. `square` forces rectangles. |
+
+The particle count is derived from the plot area, the density and the size —
+smaller particles are issued in greater numbers. `particleCount` is the ceiling,
+not the target.
+
+### A note on additive blending
+
+Particles composite with `lighter`, so overlapping ones brighten each other.
+That is what produces the glow, but stack enough of them and every channel
+clips at 255 and the colour turns white. Two things follow:
+
+- **`particleOpacity` defaults to 0.7**, not 1, to leave headroom.
+- **Line strokes are capped by area.** A stroke is a 3px band, so a large
+  budget would pile particles a dozen deep inside it and the series would lose
+  its colour. Each stroke takes only the particles its own area can carry; on an
+  area chart the surplus goes to the fill, and on a plain line chart it is
+  simply not spent.
+
+If you pick your own colours, prefer ones with **at least one channel well below
+255** (`#2ff0d6` keeps its red at 47, so it stays cyan under stacking). A colour
+whose channels are all high — a pastel or a light violet — will wash out to
+white wherever the chart is dense.
+
+### Axis, legend, tooltip
+
+| Option | Default | Description |
+|---|---|---|
+| `showAxis` | `true` | Axis lines and tick labels. |
+| `showGrid` | `true` | Grid lines. |
+| `showLegend` | `true` | Rendered only when there is more than one series or slice. |
+| `showTooltip` | `true` | Hover tooltip and crosshair. |
+| `showValues` | `false` | Print values next to the marks. |
+| `legendPosition` | `'top'` | `top`, `bottom`, `left`, `right`. |
+| `min` / `max` | auto | Pin the value axis. |
+| `beginAtZero` | `true` | Pull the value domain to include zero. |
+| `ticks` | `5` | Approximate tick count; nice-number rounding picks the real one. |
+| `valueFormat` | compact | `fn(value) → string` for ticks, labels and tooltips. |
+| `xTitle` / `yTitle` | `''` | Axis titles. |
+| `axisColor`, `gridColor`, `textColor`, `fontFamily` | dark-theme values | Axis furniture styling. |
+| `tooltip.format` | — | `fn({ title, entries }) → HTML string`. |
+
+### Per type
+
+| Option | Default | Applies to |
+|---|---|---|
+| `curve` | `'smooth'` | line — `smooth`, `linear`, `step`. |
+| `fillArea` | `false` | line — `type: 'area'` turns it on. |
+| `lineWidth` | `3.2` | line — thickness of the particle band forming the stroke. |
+| `line.areaAmount` | `0.55` | line — share of particles spent on the fill, plus whatever the stroke cap frees up. |
+| `showPoints` | `true` | line — particle clusters at each data point. |
+| `stacked` | `false` | bar |
+| `horizontal` | `false` | bar |
+| `barPadding` | `0.3` | bar — gap between categories, 0–1 of the band. |
+| `bar.fade` | `0.45` | bar — how much the fill thins toward the growing end. |
+| `bar.radius` | `4` | bar — rounded cap radius. |
+| `innerRadius` | `0` / `0.62` | pie / donut — hole size as a fraction of the outer radius. |
+| `startAngle` | `-90` | pie — degrees; 0 is 3 o'clock. |
+| `padAngle` | `1.2` | pie — gap between slices, in degrees. |
+| `pie.labels` | `'percent'` | pie — `percent`, `value`, `label`, `none`. Shown when `showValues` is on. |
+| `pie.center` | `'auto'` | pie — `total` in the donut hole, or `none`. |
+
+---
+
+## Methods
+
+```js
+chart.update(data, options);   // swap the data; particles morph to the new shape
+chart.setOptions(options);     // restyle without touching the data
+chart.resize();                // force a re-layout
+chart.stop();                  // pause the render loop (e.g. during a scroll)
+chart.start();                 // resume it
+chart.toggleSeries(key);       // mute/unmute — the same thing the legend does
+chart.toDataURL();             // PNG snapshot of the current frame
+chart.destroy();               // stop the loop, drop listeners, remove the DOM
+```
+
+`update()` reuses the existing particles wherever it can, so a data change reads
+as a morph rather than a redraw.
+
+---
+
+## Colour
+
+The default palette is a validated categorical set for dark surfaces — fixed
+slot order, chroma floor, and adjacent-pair colour-vision separation all checked
+(worst adjacent CVD ΔE 8.4, normal-vision 19.3, contrast ≥ 3:1):
+
+```
+#3987e5  #d95926  #199e70  #c98500  #d55181  #008300  #9085e9  #e66767
+```
+
+Slots are assigned in order and never shuffled, because the ordering *is* the
+safety mechanism. Past eight categories, colour stops being a reliable way to
+tell series apart — fold the tail into an "Other" series or use small multiples.
+The library warns once if you go past it.
+
+The demo page deliberately overrides this with a neon teal (`#2ff0d6`), one
+violet (`#9085e9`) for second series, and a single-hue teal ramp for
+part-to-whole charts. That is a house style for that page, not a
+recommendation — a neon sits well above the lightness band a categorical set
+normally holds to. The pair still clears colour-vision separation (worst ΔE
+23.7) and contrast (≥ 3:1), the pie slices are sorted by size so the ramp
+encodes magnitude, and every chart there also carries a legend, direct labels,
+or both.
+
+---
+
+## Accessibility
+
+- Every chart renders a visually hidden data table for screen readers, and the
+  canvas carries a descriptive `aria-label`.
+- A legend is always present for two or more series, so identity is never
+  carried by colour alone. Legend entries are real buttons — focusable, with
+  `aria-pressed` — and clicking one mutes that series.
+- `prefers-reduced-motion: reduce` disables the entrance flight, the idle drift
+  and the trails. The chart still draws; it just stops moving.
+- Charts pause when the tab is hidden or they scroll out of view.
+
+---
+
+## Development
+
+```bash
+npm install       # devDependencies only — esbuild (minify) and typescript
+npm run build     # bundle src/ -> dist/ (.js, .cjs, .min.js, .esm.js)
+npm test          # 82 tests, headless, no browser required
+npm run typecheck # index.d.ts under --strict
+npm start         # build + serve the demo on :4173
+```
+
+`dist/` is committed so the demo and the CDN work straight from a clone; CI
+fails the build if it drifts from `src/`. Releases go out by tag —
+`npm version minor && git push --follow-tags` — which runs the tests and
+publishes with npm provenance.
+
+`scripts/build.js` is a ~140-line bundler: it concatenates the ES modules in
+dependency order and wraps them in a UMD shell. It enforces the two rules that
+make that safe — single-line named imports only, and no duplicate top-level
+names across modules — and fails the build if either is broken.
+
+The test suite runs against a DOM and Canvas2D stub (`scripts/dom-stub.js`), so
+it exercises layout, particle target generation, the physics step, hover
+hit-testing and teardown without a browser.
+
+## Performance notes
+
+Particles are drawn one `arc` + `fill` each, snapped to the device pixel grid.
+Measured at 30k particles a frame: **9.0ms** for circles, 8.1ms for bare
+rectangles, 82ms for `drawImage` of a pre-rendered sprite (even unscaled — the
+per-call overhead is about ten times a fill), and 23ms for the whole field
+batched into one `Path2D`. Circles cost about 11% over squares, so particles are
+circles. Idle drift comes from a sine lookup table rather than `Math.sin`, which
+matters at tens of thousands of particles a frame.
+
+A chart stops scheduling frames entirely once its particles arrive, provided
+`particleJitter` and `particleTrail` are both `0` — so a static chart costs
+nothing. With drift enabled it animates continuously by design; if you have
+several charts on a long page, pause them while the user scrolls:
+
+```js
+let t = null;
+addEventListener('scroll', () => {
+  if (t === null) charts.forEach((c) => c.stop());
+  else clearTimeout(t);
+  t = setTimeout(() => { t = null; charts.forEach((c) => c.start()); }, 140);
+}, { passive: true });
+```
+
+Charts already pause on their own when the tab is hidden or they scroll out of
+view. If a chart feels sparse or heavy, `particleDensity` is the one knob to
+turn.
+
+## Browser support
+
+Any browser with `ResizeObserver` and Canvas2D — Chrome/Edge 64+, Firefox 69+,
+Safari 13.1+. `IntersectionObserver` and `ctx.filter` are used when present and
+degraded gracefully when not (no offscreen pausing, single-pass bloom).
+
+## Licence
+
+MIT
