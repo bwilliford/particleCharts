@@ -240,11 +240,11 @@ export class Chart {
       this.lastTime = now;
       this.field.update(dt, this.options.particle);
       this.draw(now);
-      // A chart with no idle drift and no trails has nothing left to animate
-      // once its particles arrive, so stop burning frames until something
-      // changes. `start()` is called again by layout, update and hover.
+      // A chart with no idle drift has nothing left to animate once its
+      // particles arrive, so stop burning frames until something changes.
+      // `start()` is called again by layout, update and hover.
       const cfg = this.options.particle;
-      const idle = this.field.settled && (!this.motionOk || (!cfg.jitter && !cfg.trail));
+      const idle = this.field.settled && (!this.motionOk || !cfg.jitter);
       if (this.visible && !idle) this.frame = requestAnimationFrame(tick);
     };
     this.frame = requestAnimationFrame(tick);
@@ -263,7 +263,7 @@ export class Chart {
 
     const particleCfg = this.motionOk
       ? opts.particle
-      : (this.staticCfg = { ...opts.particle, jitter: 0, trail: 0 });
+      : (this.staticCfg = { ...opts.particle, jitter: 0 });
 
     this.drawBackdrop(ctx);
     r.paintScene(this.field.particles, particleCfg, now);

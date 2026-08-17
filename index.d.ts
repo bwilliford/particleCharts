@@ -99,8 +99,6 @@ export interface ParticleOptions {
   /** Spring stiffness pulling a particle to its target, 0–1. */
   speed?: number;
   damping?: number;
-  /** Motion-blur persistence, 0–0.9. 0 clears every frame. */
-  trail?: number;
   shape?: 'soft' | 'dot' | 'square';
 }
 
@@ -237,7 +235,6 @@ export interface ChartOptions {
   particleOpacity?: number;
   particleJitter?: number;
   particleSpeed?: number;
-  particleTrail?: number;
   particleShape?: ParticleOptions['shape'];
   colors?: ColorSpec;
   curve?: LineOptions['curve'];

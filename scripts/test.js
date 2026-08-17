@@ -510,7 +510,7 @@ test('resize relayouts without losing particles', () => {
 
 test('setOptions swaps looks without touching data', () => {
   const chart = new ParticleChart(makeHost(), { type: 'bar', data: SERIES_DATA });
-  chart.setOptions({ particleBloom: 0, particleTrail: 0.5, legendPosition: 'bottom' });
+  chart.setOptions({ particleBloom: 0, particleJitter: 1.5, legendPosition: 'bottom' });
   eq(chart.options.particle.bloom, 0);
   eq(chart.root.dataset.legend, 'bottom');
   eq(chart.data.labels.length, 6, 'data untouched');

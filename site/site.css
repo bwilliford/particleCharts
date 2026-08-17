@@ -157,6 +157,11 @@ section { padding: 80px 0; position: relative; z-index: 1; }
 .grid { display: grid; gap: 20px; }
 .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* Grid and flex children default to `min-width: auto`, which is the *content's*
+   minimum — a code block's longest line. Without this, a `pre` too wide for the
+   phone drags its whole column past the viewport instead of scrolling inside
+   its own box. Every track below is sized `minmax(0, 1fr)` for the same reason. */
+.grid > * { min-width: 0; }
 
 .card {
   background: linear-gradient(180deg, var(--surface) 0%, var(--bg-soft) 100%);
@@ -166,7 +171,7 @@ section { padding: 80px 0; position: relative; z-index: 1; }
   position: relative;
   overflow: hidden;
 }
-.card-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.card-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
 .card h3 { font-size: 15px; letter-spacing: -0.01em; }
 .card .card-note { font-size: 13px; color: var(--text-3); }
 .card-chart { height: 240px; margin: 14px -6px -4px; }
@@ -250,7 +255,8 @@ input[type="range"]:focus-visible { outline: 2px solid #fff; outline-offset: 4px
 .toggle input { accent-color: #fff; margin: 0; width: 13px; height: 13px; }
 .toggle:has(input:checked) { color: var(--text); border-color: rgba(255,255,255,.3); background: rgba(255,255,255,.05); }
 
-.play-stage { display: flex; flex-direction: column; gap: 16px; }
+.play-stage { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.play-stage > * { min-width: 0; }
 .play-chart {
   height: 400px;
   background: linear-gradient(180deg, var(--surface) 0%, var(--bg-soft) 100%);
@@ -263,11 +269,15 @@ input[type="range"]:focus-visible { outline: 2px solid #fff; outline-offset: 4px
 
 pre.code {
   margin: 0;
+  max-width: 100%;
   background: var(--surface-2);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 18px 20px;
   overflow-x: auto;
+  /* Swiping a code block sideways on a phone must not chain into the page's
+     own scroll or a back-navigation gesture. */
+  overscroll-behavior-x: contain;
   font-family: var(--mono);
   font-size: 12.5px;
   line-height: 1.75;
@@ -337,14 +347,25 @@ footer {
 /* ---------------------------------------------------------- responsive -- */
 
 @media (max-width: 900px) {
-  .play { grid-template-columns: 1fr; }
+  .play { grid-template-columns: minmax(0, 1fr); }
   .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   section { padding: 60px 0; }
 }
 @media (max-width: 640px) {
-  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .grid-2, .grid-3 { grid-template-columns: minmax(0, 1fr); }
   .hero { padding: 56px 0 24px; }
   .nav-links a.hide-sm { display: none; }
   .play-chart { height: 320px; }
   .card-chart { height: 210px; }
+}
+@media (max-width: 420px) {
+  /* The gutter is the only thing competing with the charts for width here. */
+  .wrap { padding: 0 16px; }
+  .nav-inner { gap: 10px; }
+  .nav-links a { padding: 7px 8px; }
+  .card, .feature, .panel { padding: 16px; }
+  pre.code { padding: 14px 16px; font-size: 12px; }
+  /* The brand is the one item allowed to give up room; the version pill and
+     the links are already at their floor. */
+  .brand { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }

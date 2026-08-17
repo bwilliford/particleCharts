@@ -1,7 +1,7 @@
 /*!
- * Particle Charts v0.1.0 — data visualisation made of particles.
+ * Particle Charts v0.2.0 — data visualisation made of particles.
  * https://bwilliford.github.io/particleCharts/
- * MIT Licence. Built 2026-08-16.
+ * MIT Licence. Built 2026-08-17.
  */
 (function (root, factory) {
   if (typeof exports === 'object' && typeof module !== 'undefined') module.exports = factory();
@@ -641,7 +641,7 @@ const DEFAULTS = {
     /** Hard ceiling; the budget never exceeds this regardless of density. */
     max: 50000,
     /** Additive glow strength, 0..1. */
-    bloom: 0.3,
+    bloom: 0.5,
     /** Blur radius of the bloom pass, in CSS pixels. */
     bloomRadius: 14,
     /**
@@ -651,14 +651,12 @@ const DEFAULTS = {
      */
     opacity: 0.7,
     /** Idle drift amplitude in pixels — the "alive" wobble. */
-    jitter: 0.5,
+    jitter: 2,
     /** Idle drift speed. */
     jitterSpeed: 1,
     /** Spring stiffness pulling a particle to its target (0..1). */
     speed: 0.085,
     damping: 0.78,
-    /** 0 = clear each frame. Up to ~0.9 leaves comet trails. */
-    trail: 0,
     /** 'soft' (glow sprite at larger sizes) | 'dot' | 'square' */
     shape: 'soft'
   },
@@ -782,7 +780,6 @@ const ALIASES = {
   particleOpacity: ['particle', 'opacity'],
   particleJitter: ['particle', 'jitter'],
   particleSpeed: ['particle', 'speed'],
-  particleTrail: ['particle', 'trail'],
   particleShape: ['particle', 'shape'],
   particleCount: ['particle', 'max'],
   colors: ['particle', 'color'],
@@ -1052,8 +1049,7 @@ function allocate(weights, budget, minEach) {
 
 // ---- src/core/renderer.js ----------------------------------------------
 /**
- * Canvas plumbing: HiDPI sizing, the particle sprite cache, the trail buffer
- * and the bloom pass.
+ * Canvas plumbing: HiDPI sizing, the particle sprite cache and the bloom pass.
  *
  * Particles are drawn into an offscreen *scene* layer with additive blending so
  * overlapping particles brighten each other, then that layer is composited onto
@@ -1196,17 +1192,7 @@ class Renderer {
     const dpr = this.dpr;
     const dw = this.scene.width;
     const dh = this.scene.height;
-    const trail = clamp(cfg.trail || 0, 0, 0.92);
-
-    if (trail < 0.02) {
-      ctx.clearRect(0, 0, dw, dh);
-    } else {
-      ctx.save();
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.fillStyle = 'rgba(0,0,0,' + Math.max(0.05, 1 - trail).toFixed(3) + ')';
-      ctx.fillRect(0, 0, dw, dh);
-      ctx.restore();
-    }
+    ctx.clearRect(0, 0, dw, dh);
 
     ctx.globalCompositeOperation = 'lighter';
     const shape = cfg.shape || 'soft';
@@ -2174,11 +2160,11 @@ class Chart {
       this.lastTime = now;
       this.field.update(dt, this.options.particle);
       this.draw(now);
-      // A chart with no idle drift and no trails has nothing left to animate
-      // once its particles arrive, so stop burning frames until something
-      // changes. `start()` is called again by layout, update and hover.
+      // A chart with no idle drift has nothing left to animate once its
+      // particles arrive, so stop burning frames until something changes.
+      // `start()` is called again by layout, update and hover.
       const cfg = this.options.particle;
-      const idle = this.field.settled && (!this.motionOk || (!cfg.jitter && !cfg.trail));
+      const idle = this.field.settled && (!this.motionOk || !cfg.jitter);
       if (this.visible && !idle) this.frame = requestAnimationFrame(tick);
     };
     this.frame = requestAnimationFrame(tick);
@@ -2197,7 +2183,7 @@ class Chart {
 
     const particleCfg = this.motionOk
       ? opts.particle
-      : (this.staticCfg = { ...opts.particle, jitter: 0, trail: 0 });
+      : (this.staticCfg = { ...opts.particle, jitter: 0 });
 
     this.drawBackdrop(ctx);
     r.paintScene(this.field.particles, particleCfg, now);
@@ -3237,7 +3223,7 @@ function escHtml(v) {
  */
 
 
-const version = '0.1.0';
+const version = '0.2.0';
 
 const TYPES = {
   line: LineChart,

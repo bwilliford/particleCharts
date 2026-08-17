@@ -9,7 +9,7 @@ import { PieChart } from './charts/pie.js';
 import { DEFAULTS } from './core/options.js';
 import { DEFAULT_PALETTE } from './core/color.js';
 
-export const version = '0.1.0';
+export const version = '0.2.0';
 
 const TYPES = {
   line: LineChart,

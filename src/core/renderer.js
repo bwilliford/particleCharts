@@ -1,6 +1,5 @@
 /**
- * Canvas plumbing: HiDPI sizing, the particle sprite cache, the trail buffer
- * and the bloom pass.
+ * Canvas plumbing: HiDPI sizing, the particle sprite cache and the bloom pass.
  *
  * Particles are drawn into an offscreen *scene* layer with additive blending so
  * overlapping particles brighten each other, then that layer is composited onto
@@ -145,17 +144,7 @@ export class Renderer {
     const dpr = this.dpr;
     const dw = this.scene.width;
     const dh = this.scene.height;
-    const trail = clamp(cfg.trail || 0, 0, 0.92);
-
-    if (trail < 0.02) {
-      ctx.clearRect(0, 0, dw, dh);
-    } else {
-      ctx.save();
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.fillStyle = 'rgba(0,0,0,' + Math.max(0.05, 1 - trail).toFixed(3) + ')';
-      ctx.fillRect(0, 0, dw, dh);
-      ctx.restore();
-    }
+    ctx.clearRect(0, 0, dw, dh);
 
     ctx.globalCompositeOperation = 'lighter';
     const shape = cfg.shape || 'soft';

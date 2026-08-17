@@ -32,7 +32,7 @@ export const DEFAULTS = {
     /** Hard ceiling; the budget never exceeds this regardless of density. */
     max: 50000,
     /** Additive glow strength, 0..1. */
-    bloom: 0.3,
+    bloom: 0.5,
     /** Blur radius of the bloom pass, in CSS pixels. */
     bloomRadius: 14,
     /**
@@ -42,14 +42,12 @@ export const DEFAULTS = {
      */
     opacity: 0.7,
     /** Idle drift amplitude in pixels — the "alive" wobble. */
-    jitter: 0.5,
+    jitter: 2,
     /** Idle drift speed. */
     jitterSpeed: 1,
     /** Spring stiffness pulling a particle to its target (0..1). */
     speed: 0.085,
     damping: 0.78,
-    /** 0 = clear each frame. Up to ~0.9 leaves comet trails. */
-    trail: 0,
     /** 'soft' (glow sprite at larger sizes) | 'dot' | 'square' */
     shape: 'soft'
   },
@@ -173,7 +171,6 @@ const ALIASES = {
   particleOpacity: ['particle', 'opacity'],
   particleJitter: ['particle', 'jitter'],
   particleSpeed: ['particle', 'speed'],
-  particleTrail: ['particle', 'trail'],
   particleShape: ['particle', 'shape'],
   particleCount: ['particle', 'max'],
   colors: ['particle', 'color'],

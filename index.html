@@ -29,7 +29,7 @@
       <a href="#playground">Playground</a>
       <a href="#start" class="hide-sm">Quick start</a>
       <a href="#api">API</a>
-      <span class="pill" id="version-pill">v1.0.0</span>
+      <span class="pill" id="version-pill">v0.2.0</span>
     </nav>
   </div>
 </header>
@@ -51,7 +51,7 @@
 
   <div class="wrap">
     <div class="hero-chart" id="hero-chart"></div>
-    <p class="hero-caption" id="hero-caption">steady growth, smoothed with a monotone curve</p>
+    <p class="hero-caption" id="hero-caption">a slow swell of growth, smoothed with a monotone curve</p>
   </div>
 
   <!-- ----------------------------------------------------------- types -- -->
@@ -126,16 +126,12 @@
               <input id="c-size" type="range" min="0.2" max="4" step="0.1" value="0.5">
             </div>
             <div class="ctrl">
-              <label for="c-bloom">Bloom <b id="v-bloom">0.30</b></label>
-              <input id="c-bloom" type="range" min="0" max="1" step="0.05" value="0.3">
+              <label for="c-bloom">Bloom <b id="v-bloom">0.50</b></label>
+              <input id="c-bloom" type="range" min="0" max="1" step="0.05" value="0.5">
             </div>
             <div class="ctrl">
-              <label for="c-jitter">Jitter <b id="v-jitter">0.5</b></label>
-              <input id="c-jitter" type="range" min="0" max="4" step="0.1" value="0.5">
-            </div>
-            <div class="ctrl">
-              <label for="c-trail">Trail <b id="v-trail">0.00</b></label>
-              <input id="c-trail" type="range" min="0" max="0.9" step="0.02" value="0">
+              <label for="c-jitter">Jitter <b id="v-jitter">2.0</b></label>
+              <input id="c-jitter" type="range" min="0" max="4" step="0.1" value="2">
             </div>
           </div>
 
@@ -274,11 +270,10 @@
             <tr><td>particleSize</td><td>0.5</td><td>Base particle radius in CSS pixels.</td></tr>
             <tr><td>particleDensity</td><td>15</td><td>Multiplier on the auto-computed particle budget.</td></tr>
             <tr><td>particleCount</td><td>50000</td><td>Hard ceiling on particles, whatever the density.</td></tr>
-            <tr><td>particleBloom</td><td>0.3</td><td>Additive glow strength, 0–1.</td></tr>
+            <tr><td>particleBloom</td><td>0.5</td><td>Additive glow strength, 0–1.</td></tr>
             <tr><td>particleOpacity</td><td>0.7</td><td>Global particle alpha. Kept under 1 so additive stacking does not clip hues to white.</td></tr>
-            <tr><td>particleJitter</td><td>0.5</td><td>Idle drift amplitude in pixels — the “alive” wobble.</td></tr>
+            <tr><td>particleJitter</td><td>2</td><td>Idle drift amplitude in pixels — the “alive” wobble.</td></tr>
             <tr><td>particleSpeed</td><td>0.085</td><td>Spring stiffness pulling each particle to its target.</td></tr>
-            <tr><td>particleTrail</td><td>0</td><td>Motion-blur persistence, 0–0.9.</td></tr>
             <tr><td>particleShape</td><td>'soft'</td><td>Particles are circles. <code>soft</code> adds a glow sprite once they are big enough for the halo to read; <code>square</code> forces rectangles.</td></tr>
 
             <tr class="group"><td colspan="3">Chrome</td></tr>

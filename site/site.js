@@ -25,7 +25,10 @@
 
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-  var HERO_DATA = [18, 24, 21, 33, 38, 34, 46, 52, 49, 61, 68, 74];
+  /* A rising trend with one slow sine swell riding on it — the monotone curve
+     has almost nothing to fight, so the band reads as a single sweep rather
+     than a row of switchbacks. */
+  var HERO_DATA = [22, 31, 37, 40, 39, 38, 40, 46, 56, 65, 71, 74];
 
   var TRAFFIC = {
     labels: ['Direct', 'Search', 'Social', 'Referral', 'Email'],
@@ -35,7 +38,7 @@
   // ------------------------------------------------------------- charts ----
 
   /* Every chart on this page is collected here so you can poke at them from
-     the devtools console: demoCharts[0].setOptions({ particleTrail: 0.7 }) */
+     the devtools console: demoCharts[0].setOptions({ particleBloom: 0.9 }) */
   var demoCharts = (window.demoCharts = []);
   function track(chart) { demoCharts.push(chart); return chart; }
 
@@ -43,8 +46,6 @@
     type: 'area',
     data: { labels: MONTHS, name: 'Revenue', values: HERO_DATA },
     particleColor: TEAL,
-    particleBloom: 0.4,
-    particleJitter: 1.4,
     lineWidth: 3.6,
     showLegend: false,
     valueFormat: function (v) { return '$' + v + 'k'; },
@@ -52,7 +53,7 @@
   }));
 
   document.getElementById('hero-caption').textContent =
-    'steady growth, smoothed with a monotone curve \u00b7 ' +
+    'a slow swell of growth, smoothed with a monotone curve \u00b7 ' +
     hero.field.count.toLocaleString() + ' particles';
 
   track(new PC.ParticleChart('#demo-line', {
@@ -64,7 +65,6 @@
         { name: 'Last week', data: [28, 30, 35, 36, 44, 41, 47], color: VIOLET }
       ]
     },
-    particleBloom: 0.35,
     legend: { position: 'top', align: 'start' },
     axis: { ticks: 4 }
   }));
@@ -73,7 +73,6 @@
     type: 'bar',
     data: { labels: ['Q1', 'Q2', 'Q3', 'Q4'], name: 'Bookings', values: [42, 58, 51, 73] },
     particleColor: TEAL,
-    particleBloom: 0.3,
     showValues: true,
     axis: { ticks: 4 }
   }));
@@ -82,7 +81,6 @@
     type: 'pie',
     data: TRAFFIC,
     particleColor: SLICES,
-    particleBloom: 0.3,
     showValues: true,
     padAngle: 3,
     legendPosition: 'right'
@@ -92,7 +90,6 @@
     type: 'donut',
     data: TRAFFIC,
     particleColor: SLICES,
-    particleBloom: 0.3,
     showValues: true,
     padAngle: 3,
     legendPosition: 'right'
@@ -123,9 +120,8 @@
     type: 'line',
     density: 15,
     size: 0.5,
-    bloom: 0.3,
-    jitter: 0.5,
-    trail: 0,
+    bloom: 0.5,
+    jitter: 2,
     axis: true,
     grid: true,
     legend: true,
@@ -144,7 +140,6 @@
       particleSize: state.size,
       particleBloom: state.bloom,
       particleJitter: state.jitter,
-      particleTrail: state.trail,
       showAxis: state.axis,
       showGrid: state.grid,
       showLegend: state.legend,
@@ -182,7 +177,6 @@
       '  particleSize: ' + state.size.toFixed(1) + ',',
       '  particleBloom: ' + state.bloom.toFixed(2) + ',',
       '  particleJitter: ' + state.jitter.toFixed(1) + ',',
-      '  particleTrail: ' + state.trail.toFixed(2) + ',',
       '  showAxis: ' + state.axis + ',',
       '  showGrid: ' + state.grid + ',',
       '  showLegend: ' + state.legend + ',',
@@ -207,8 +201,7 @@
     ['c-density', 'v-density', 'density', 1],
     ['c-size', 'v-size', 'size', 1],
     ['c-bloom', 'v-bloom', 'bloom', 2],
-    ['c-jitter', 'v-jitter', 'jitter', 1],
-    ['c-trail', 'v-trail', 'trail', 2]
+    ['c-jitter', 'v-jitter', 'jitter', 1]
   ].forEach(function (row) {
     var input = document.getElementById(row[0]);
     var out = document.getElementById(row[1]);
@@ -283,7 +276,7 @@
       'chart.update(nextData);',
       '',
       '// Restyle without touching the data.',
-      'chart.setOptions({ particleTrail: 0.6, particleBloom: 1 });',
+      'chart.setOptions({ particleBloom: 1, particleSize: 1.2 });',
       '',
       '// Snapshot, then clean up.',
       'const png = chart.toDataURL();',

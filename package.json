@@ -1,6 +1,6 @@
 {
   "name": "particle-charts",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Data visualisation made of particles \u2014 line, area, bar, pie and donut charts rendered as clouds of light. Zero dependencies.",
   "keywords": [
     "charts",

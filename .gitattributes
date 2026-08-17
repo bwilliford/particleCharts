@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Never let the rule above try to normalise line endings inside binaries.
+*.gif binary
+*.png binary

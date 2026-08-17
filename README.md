@@ -1,5 +1,11 @@
 # Particle Charts
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bwilliford/particleCharts/main/assets/demo.gif"
+       alt="A particle area chart morphing through three datasets, then reforming as a bar, donut and pie chart"
+       width="640">
+</p>
+
 Data visualisation made of particles. Line, area, bar, pie and donut charts
 rendered as living clouds of light on a `<canvas>`, driven by plain JSON.
 
@@ -36,7 +42,7 @@ new ParticleChart('#chart', {
 ```
 
 unpkg works the same way: `https://unpkg.com/particle-charts@0/dist/particle-charts.min.js`.
-Drop the `.min` for the readable build. Pin an exact version (`@0.1.0`) in
+Drop the `.min` for the readable build. Pin an exact version (`@0.2.0`) in
 production rather than a range.
 
 **npm** — ES module source is shipped as-is, with TypeScript declarations:
@@ -140,11 +146,10 @@ same thing, and the nested form wins if you write both.
 | `particleSizeJitter` | `0` | 0–1 random size spread. `0` keeps every particle identical. |
 | `particleDensity` | `15` | Multiplier on the auto-computed budget. |
 | `particleCount` | `50000` | Hard ceiling, whatever the density. |
-| `particleBloom` | `0.3` | Additive glow strength, 0–1. |
+| `particleBloom` | `0.5` | Additive glow strength, 0–1. |
 | `particleOpacity` | `0.7` | Global particle alpha. Kept under 1 so additive stacking does not clip hues to white. |
-| `particleJitter` | `0.5` | Idle drift amplitude in pixels. |
+| `particleJitter` | `2` | Idle drift amplitude in pixels. |
 | `particleSpeed` | `0.085` | Spring stiffness toward the target. |
-| `particleTrail` | `0` | Motion-blur persistence, 0–0.9. |
 | `particleShape` | `'soft'` | Particles are circles; `soft` adds a glow sprite once they are large enough for the halo to read. `square` forces rectangles. |
 
 The particle count is derived from the plot area, the density and the size —
@@ -260,8 +265,8 @@ or both.
 - A legend is always present for two or more series, so identity is never
   carried by colour alone. Legend entries are real buttons — focusable, with
   `aria-pressed` — and clicking one mutes that series.
-- `prefers-reduced-motion: reduce` disables the entrance flight, the idle drift
-  and the trails. The chart still draws; it just stops moving.
+- `prefers-reduced-motion: reduce` disables the entrance flight and the idle
+  drift. The chart still draws; it just stops moving.
 - Charts pause when the tab is hidden or they scroll out of view.
 
 ---
@@ -301,8 +306,8 @@ circles. Idle drift comes from a sine lookup table rather than `Math.sin`, which
 matters at tens of thousands of particles a frame.
 
 A chart stops scheduling frames entirely once its particles arrive, provided
-`particleJitter` and `particleTrail` are both `0` — so a static chart costs
-nothing. With drift enabled it animates continuously by design; if you have
+`particleJitter` is `0` — so a static chart costs nothing. With drift enabled
+it animates continuously by design; if you have
 several charts on a long page, pause them while the user scrolls:
 
 ```js
