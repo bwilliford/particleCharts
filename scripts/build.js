@@ -106,9 +106,13 @@ async function build() {
   }).join(',\n');
 
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+  /* Deliberately no build date. dist/ is committed and CI asserts a fresh
+     build matches it byte for byte, so a timestamp in the banner would mark
+     dist/ stale at every midnight UTC even with no source change. Keeping the
+     build reproducible is also what lets provenance attest the tarball. */
   const banner =
     `/*!\n * Particle Charts v${pkg.version} — data visualisation made of particles.\n` +
-    ` * ${pkg.homepage || 'https://github.com/'}\n * MIT Licence. Built ${new Date().toISOString().slice(0, 10)}.\n */\n`;
+    ` * ${pkg.homepage || 'https://github.com/'}\n * MIT Licence.\n */\n`;
 
   const bundle =
     banner +

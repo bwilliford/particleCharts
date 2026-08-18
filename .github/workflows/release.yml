@@ -1,9 +1,12 @@
 name: Release
 
 # Tag a commit to publish, e.g.  npm version minor && git push --follow-tags
+# `workflow_dispatch` publishes whatever version package.json currently names,
+# for when a tag already exists or needs re-running against a newer workflow.
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -19,15 +22,25 @@ jobs:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
           cache: npm
+
+      # Node 22 ships npm 10, which predates trusted publishing. The OIDC
+      # handshake below needs 11.5.1 or newer.
+      - run: npm install -g npm@latest
+
       - run: npm ci
       - run: npm test
       - run: npm run typecheck
+      # Only meaningful for a tag push; on a manual run the ref is a branch.
       - name: Tag must match package version
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           TAG="${GITHUB_REF_NAME#v}"
           PKG="$(node -p "require('./package.json').version")"
           test "$TAG" = "$PKG" || (echo "::error::tag v$TAG does not match package.json $PKG" && exit 1)
+      # No NODE_AUTH_TOKEN: this publishes over OIDC ("trusted publishing"),
+      # configured on npmjs.com against this repo and this workflow filename.
+      # The job mints a short-lived credential per run, so there is no static
+      # token to leak or rotate — and it sidesteps the 2FA/OTP prompt that
+      # blocks token-based publishing on accounts with 2FA on writes.
       # prepublishOnly runs the build; publishConfig.provenance signs it.
       - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

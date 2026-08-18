@@ -1,7 +1,7 @@
 /*!
  * Particle Charts v0.2.0 — data visualisation made of particles.
  * https://bwilliford.github.io/particleCharts/
- * MIT Licence. Built 2026-08-17.
+ * MIT Licence.
  */
 (function (root, factory) {
   if (typeof exports === 'object' && typeof module !== 'undefined') module.exports = factory();
