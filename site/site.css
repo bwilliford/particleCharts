@@ -12,10 +12,58 @@
   --text-2: #a6adba;
   --text-3: #6f7889;
   --accent: #2ff0d6;
+  --nav-bg: rgba(5, 6, 9, 0.94);
+  --hover: rgba(255, 255, 255, 0.05);
+  --hover-strong: rgba(255, 255, 255, 0.3);
+  --stripe: rgba(255, 255, 255, 0.02);
+  --glow: rgba(47, 240, 214, 0.07);
+  --heart: #ff5d7a;
+  /* The one place the page inverts: primary buttons and the pressed segment. */
+  --invert-bg: #ffffff;
+  --invert-fg: #06070a;
+  --invert-bg-hover: #e6e9f0;
+  --code-fg: #c9d1e0;
+  --code-k: #9fb4ff;
+  --code-s: #a5e6b8;
+  --code-n: #ffd9a0;
+  --code-c: #5b6373;
+  --code-p: #e8edf6;
+  --code-f: #ffffff;
   --radius: 14px;
   --max: 1140px;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+}
+
+/* Light mode. Only the tokens move; every rule below reads through them.
+   The chart chrome is themed separately, through the library's `theme` option. */
+:root[data-theme="light"] {
+  --bg: #fbfbfd;
+  --bg-soft: #f3f5f8;
+  --surface: #ffffff;
+  --surface-2: #f5f7fa;
+  --line: rgba(22, 26, 34, 0.1);
+  --line-strong: rgba(22, 26, 34, 0.2);
+  --text: #14181f;
+  --text-2: #4d5666;
+  --text-3: #79828f;
+  --accent: #0e9c88;
+  --nav-bg: rgba(251, 251, 253, 0.94);
+  --hover: rgba(22, 26, 34, 0.05);
+  --hover-strong: rgba(22, 26, 34, 0.28);
+  --stripe: rgba(22, 26, 34, 0.025);
+  --glow: rgba(14, 156, 136, 0.1);
+  --heart: #e11d48;
+  --invert-bg: #14181f;
+  --invert-fg: #ffffff;
+  --invert-bg-hover: #2b3240;
+  --code-fg: #2b3240;
+  --code-k: #4b56c4;
+  --code-s: #157a4d;
+  --code-n: #a35a00;
+  --code-c: #8a93a1;
+  --code-p: #2b3240;
+  --code-f: #14181f;
 }
 
 * { box-sizing: border-box; }
@@ -31,6 +79,7 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  transition: background-color .25s ease, color .25s ease;
 }
 
 /* A single very soft light source behind the hero. */
@@ -39,7 +88,7 @@ body::before {
   position: fixed;
   inset: -20% 0 auto 0;
   height: 70vh;
-  background: radial-gradient(60% 60% at 50% 0%, rgba(47, 240, 214, 0.07), transparent 70%);
+  background: radial-gradient(60% 60% at 50% 0%, var(--glow), transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
@@ -69,13 +118,14 @@ header.nav {
      sticky bar has to be recomputed on every scroll frame, and on a page with
      live canvases that is the difference between smooth and sticky scrolling.
      On a near-black page an opaque fill is indistinguishable anyway. */
-  background: rgba(5, 6, 9, 0.94);
+  background: var(--nav-bg);
   border-bottom: 1px solid var(--line);
 }
-.nav-inner { display: flex; align-items: center; gap: 20px; height: 60px; }
+.nav-inner { display: flex; align-items: center; gap: 10px; height: 60px; }
+.nav-inner .brand + .pill { flex: 0 0 auto; }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -0.02em; text-decoration: none; }
 .brand-mark { width: 22px; height: 22px; flex: 0 0 auto; }
-.nav-links { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.nav-links { margin-left: auto; display: flex; align-items: center; gap: 4px; padding-left: 10px; }
 .nav-links a {
   text-decoration: none;
   color: var(--text-2);
@@ -84,7 +134,30 @@ header.nav {
   border-radius: 8px;
   transition: color .18s ease, background .18s ease;
 }
-.nav-links a:hover { color: var(--text); background: rgba(255, 255, 255, 0.05); }
+.nav-links a:hover { color: var(--text); background: var(--hover); }
+/* Icon-only, so it costs no horizontal room on a phone. The sun shows in dark
+   mode and the moon in light — each icon names the mode you would switch to. */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-left: 4px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: color .18s ease, background .18s ease, border-color .18s ease;
+}
+.theme-toggle:hover { color: var(--text); background: var(--hover); border-color: var(--line-strong); }
+.theme-toggle svg { width: 16px; height: 16px; display: block; }
+.theme-toggle .ico-moon { display: none; }
+:root[data-theme="light"] .theme-toggle .ico-sun { display: none; }
+:root[data-theme="light"] .theme-toggle .ico-moon { display: block; }
+
 .pill {
   font-family: var(--mono);
   font-size: 11px;
@@ -96,7 +169,15 @@ header.nav {
 
 /* --------------------------------------------------------------- hero ---- */
 
-.hero { padding: 88px 0 40px; text-align: center; }
+.hero { padding: 44px 0 24px; text-align: center; }
+.hero-kicker {
+  font-size: 12px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  font-weight: 500;
+  margin-bottom: 14px;
+}
 .hero h1 {
   font-size: clamp(40px, 7vw, 76px);
   letter-spacing: -0.038em;
@@ -104,12 +185,12 @@ header.nav {
   text-wrap: balance;
 }
 .hero p.lede {
-  margin: 22px auto 0;
+  margin: 16px auto 0;
   max-width: 620px;
   color: var(--text-2);
   font-size: clamp(16px, 2vw, 19px);
 }
-.cta { display: flex; gap: 12px; justify-content: center; margin-top: 32px; flex-wrap: wrap; }
+.cta { display: flex; gap: 12px; justify-content: center; margin-top: 24px; flex-wrap: wrap; }
 
 .btn {
   display: inline-flex;
@@ -125,13 +206,13 @@ header.nav {
   transition: transform .15s ease, background .18s ease, border-color .18s ease;
 }
 .btn:active { transform: translateY(1px); }
-.btn-primary { background: #fff; color: #06070a; }
-.btn-primary:hover { background: #e6e9f0; }
+.btn-primary { background: var(--invert-bg); color: var(--invert-fg); }
+.btn-primary:hover { background: var(--invert-bg-hover); }
 .btn-ghost { border-color: var(--line-strong); color: var(--text); }
-.btn-ghost:hover { background: rgba(255, 255, 255, 0.05); }
+.btn-ghost:hover { background: var(--hover); }
 
 .hero-chart {
-  margin-top: 56px;
+  margin-top: 28px;
   height: clamp(260px, 42vh, 400px);
   position: relative;
 }
@@ -213,7 +294,7 @@ section { padding: 80px 0; position: relative; z-index: 1; }
   transition: background .16s ease, color .16s ease, border-color .16s ease;
 }
 .seg button:hover { color: var(--text); border-color: var(--line-strong); }
-.seg button[aria-pressed="true"] { background: #fff; color: #06070a; border-color: #fff; }
+.seg button[aria-pressed="true"] { background: var(--invert-bg); color: var(--invert-fg); border-color: var(--invert-bg); }
 
 .ctrl { margin-bottom: 15px; }
 .ctrl:last-child { margin-bottom: 0; }
@@ -226,7 +307,7 @@ input[type="range"] {
   width: 100%;
   height: 3px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--line-strong);
   outline: none;
 }
 input[type="range"]::-webkit-slider-thumb {
@@ -236,12 +317,12 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 50%;
   background: var(--accent);
   cursor: pointer;
-  box-shadow: 0 0 12px rgba(47, 240, 214, 0.5);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 50%, transparent);
 }
 input[type="range"]::-moz-range-thumb {
   width: 14px; height: 14px; border: 0; border-radius: 50%; background: var(--accent); cursor: pointer;
 }
-input[type="range"]:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+input[type="range"]:focus-visible { outline: 2px solid var(--text); outline-offset: 4px; }
 
 .toggles { display: flex; flex-wrap: wrap; gap: 8px; }
 .toggle {
@@ -252,8 +333,8 @@ input[type="range"]:focus-visible { outline: 2px solid #fff; outline-offset: 4px
   transition: color .16s ease, border-color .16s ease, background .16s ease;
 }
 .toggle:hover { border-color: var(--line-strong); color: var(--text); }
-.toggle input { accent-color: #fff; margin: 0; width: 13px; height: 13px; }
-.toggle:has(input:checked) { color: var(--text); border-color: rgba(255,255,255,.3); background: rgba(255,255,255,.05); }
+.toggle input { accent-color: var(--text); margin: 0; width: 13px; height: 13px; }
+.toggle:has(input:checked) { color: var(--text); border-color: var(--hover-strong); background: var(--hover); }
 
 .play-stage { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .play-stage > * { min-width: 0; }
@@ -281,15 +362,15 @@ pre.code {
   font-family: var(--mono);
   font-size: 12.5px;
   line-height: 1.75;
-  color: #c9d1e0;
+  color: var(--code-fg);
   tab-size: 2;
 }
-pre.code .k { color: #9fb4ff; }
-pre.code .s { color: #a5e6b8; }
-pre.code .n { color: #ffd9a0; }
-pre.code .c { color: #5b6373; font-style: italic; }
-pre.code .p { color: #e8edf6; }
-pre.code .f { color: #ffffff; }
+pre.code .k { color: var(--code-k); }
+pre.code .s { color: var(--code-s); }
+pre.code .n { color: var(--code-n); }
+pre.code .c { color: var(--code-c); font-style: italic; }
+pre.code .p { color: var(--code-p); }
+pre.code .f { color: var(--code-f); }
 
 .code-head {
   display: flex; align-items: center; gap: 10px;
@@ -297,6 +378,63 @@ pre.code .f { color: #ffffff; }
   padding: 0 4px 10px;
 }
 .code-head .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--line-strong); }
+
+/* ---------------------------------------------------------- showcase --- */
+
+.shot {
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+}
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* An intrinsic width/height on the tag reserves the row before the bytes
+     arrive, so a lazy-loaded shot does not shove the page down as it lands. */
+  border-bottom: 1px solid var(--line);
+}
+/* The whole card is the link, so the anchor has to be the block that fills it
+   rather than an inline box wrapping the image. */
+.shot a {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.shot figcaption {
+  padding: 14px 18px;
+  font-size: 13.5px;
+  color: var(--text);
+}
+.shot figcaption span { color: var(--text-3); }
+
+.shot:hover { border-color: var(--line-strong); }
+.shot a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.showcase-cta {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 14.5px;
+  color: var(--text-2);
+}
+.showcase-cta a { color: var(--text); text-decoration: none; border-bottom: 1px solid var(--line-strong); }
+.showcase-cta a:hover { border-bottom-color: currentColor; }
+
+/* A lone entry spans the full width rather than sitting in one column with a
+   hole beside it. Sorts itself out as soon as a second one lands. */
+#showcase-grid .shot:only-child { grid-column: 1 / -1; }
+
+.showcase-empty {
+  grid-column: 1 / -1;
+  padding: 40px 22px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 14px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+}
 
 /* ----------------------------------------------------------- features --- */
 
@@ -318,7 +456,7 @@ table.api tbody tr:last-child td { border-bottom: 0; }
 table.api td:first-child { font-family: var(--mono); font-size: 12.5px; color: var(--text); white-space: nowrap; }
 table.api td:nth-child(2) { font-family: var(--mono); font-size: 12px; color: var(--text-3); white-space: nowrap; }
 table.api td:last-child { color: var(--text-2); }
-table.api tbody tr.group td { background: rgba(255,255,255,.02); font-weight: 600; color: var(--text-3);
+table.api tbody tr.group td { background: var(--stripe); font-weight: 600; color: var(--text-3);
   font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-family: var(--sans); }
 
 /* ------------------------------------------------------------- footer --- */
@@ -333,15 +471,36 @@ footer {
 .footer-inner a { color: var(--text-2); text-decoration: none; }
 .footer-inner a:hover { color: var(--text); }
 .footer-inner .spacer { margin-left: auto; }
+/* Inline-flex would strand each link on its own line if the row wrapped, so
+   the credit stays inline text with the heart nudged into the baseline. */
+.footer-love { display: inline; }
+.footer-love .heart { width: 14px; height: 14px; color: var(--heart); vertical-align: -2px; margin: 0 1px; }
+.footer-love a { color: var(--text-2); text-decoration: none; border-bottom: 1px solid var(--line-strong); }
+.footer-love a:hover { color: var(--text); border-bottom-color: currentColor; }
+.footer-inner .kofi { display: inline-flex; align-items: center; }
+.footer-inner .kofi img { display: block; }
 
 /* ------------------------------------------------------------- motion --- */
 
 .reveal { opacity: 0; transform: translateY(16px); transition: opacity .7s cubic-bezier(.2,.7,.3,1), transform .7s cubic-bezier(.2,.7,.3,1); }
 .reveal.in { opacity: 1; transform: none; }
 
+/* The hero is on screen at load, so its observers all fire on the same tick —
+   the stagger has to come from the transition, not from the trigger. Short
+   steps: this reads as one entrance settling, not five separate arrivals. */
+.hero .hero-kicker { transition-delay: .04s; }
+.hero h1 { transition-delay: .1s; }
+.hero .lede { transition-delay: .18s; }
+.hero .cta { transition-delay: .26s; }
+.hero-stage { transition-delay: .34s; }
+/* The chart runs its own particle entrance underneath; a smaller lift keeps the
+   two from reading as two separate movements. */
+.hero-stage.reveal { transform: translateY(10px); }
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .reveal { opacity: 1; transform: none; transition: none; }
+  .hero .hero-kicker, .hero h1, .hero .lede, .hero .cta, .hero-stage { transition-delay: 0s; }
 }
 
 /* ---------------------------------------------------------- responsive -- */
@@ -353,7 +512,8 @@ footer {
 }
 @media (max-width: 640px) {
   .grid-2, .grid-3 { grid-template-columns: minmax(0, 1fr); }
-  .hero { padding: 56px 0 24px; }
+  .hero { padding: 28px 0 16px; }
+  .hero-chart { margin-top: 20px; }
   .nav-links a.hide-sm { display: none; }
   .play-chart { height: 320px; }
   .card-chart { height: 210px; }
@@ -361,8 +521,11 @@ footer {
 @media (max-width: 420px) {
   /* The gutter is the only thing competing with the charts for width here. */
   .wrap { padding: 0 16px; }
-  .nav-inner { gap: 10px; }
+  .nav-inner { gap: 8px; }
   .nav-links a { padding: 7px 8px; }
+  /* Beside the brand the pill is the first thing to go on a phone; the nav
+     links and the theme toggle are the ones people actually reach for. */
+  .nav-inner .brand + .pill { display: none; }
   .card, .feature, .panel { padding: 16px; }
   pre.code { padding: 14px 16px; font-size: 12px; }
   /* The brand is the one item allowed to give up room; the version pill and

@@ -62,10 +62,16 @@ export function pointScale(count, range) {
   return scale;
 }
 
-/** Continuous x positions (numeric x axis) exposed through the same interface. */
-export function valueCategoryScale(values, range) {
-  const min = Math.min.apply(null, values);
-  const max = Math.max.apply(null, values);
+/**
+ * Continuous x positions (numeric x axis) exposed through the same interface.
+ *
+ * `domain` overrides the data extent — a scatter wants its axis rounded out to
+ * nice tick bounds, so the outermost marks sit inside the plot instead of flush
+ * against its edges. Omitted, the domain is the extent, as it always was.
+ */
+export function valueCategoryScale(values, range, domain) {
+  const min = domain ? domain[0] : Math.min.apply(null, values);
+  const max = domain ? domain[1] : Math.max.apply(null, values);
   const s = linearScale([min, max], range);
   return {
     step: values.length > 1 ? (range[1] - range[0]) / (values.length - 1) : 0,

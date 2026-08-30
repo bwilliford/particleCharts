@@ -3,10 +3,57 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Particle Charts — charts made of light</title>
-<meta name="description" content="A zero-dependency JavaScript charting library that renders line, bar, pie and donut charts as living clouds of particles.">
+<title>Particle Charts — JavaScript charts made of light</title>
+<meta name="description" content="A zero-dependency JavaScript charting library that renders bar, line, bubble, radar, pie and donut charts as living clouds of particles. 20 kB, responsive, accessible and typed.">
 <meta name="color-scheme" content="dark">
+<link rel="canonical" href="https://bwilliford.github.io/particleCharts/">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Particle Charts">
+<meta property="og:url" content="https://bwilliford.github.io/particleCharts/">
+<meta property="og:title" content="Particle Charts — JavaScript charts made of light">
+<meta property="og:description" content="A zero-dependency JavaScript charting library that renders bar, line, bubble, radar, pie and donut charts as living clouds of particles.">
+<meta property="og:image" content="https://bwilliford.github.io/particleCharts/assets/demo.gif">
+<meta property="og:image:width" content="640">
+<meta property="og:image:height" content="400">
+<meta property="og:image:alt" content="A particle area chart morphing through three datasets, then reforming as a bar, donut and pie chart">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Particle Charts — JavaScript charts made of light">
+<meta name="twitter:description" content="A zero-dependency JavaScript charting library that renders bar, line, bubble, radar, pie and donut charts as living clouds of particles.">
+<meta name="twitter:image" content="https://bwilliford.github.io/particleCharts/assets/demo.gif">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareSourceCode",
+  "name": "Particle Charts",
+  "alternateName": "particle-charts",
+  "description": "A zero-dependency JavaScript charting library that renders bar, line, bubble, radar, pie and donut charts as living clouds of particles on a canvas.",
+  "url": "https://bwilliford.github.io/particleCharts/",
+  "codeRepository": "https://github.com/bwilliford/particleCharts",
+  "programmingLanguage": "JavaScript",
+  "runtimePlatform": "Web browser",
+  "license": "https://opensource.org/licenses/MIT",
+  "version": "1.0.0",
+  "author": { "@type": "Person", "name": "Blake Williford", "url": "https://blakewilliford.com" },
+  "keywords": "particle chart, JavaScript chart library, canvas charts, data visualisation, bar chart, line chart, bubble chart, radar chart, pie chart, donut chart"
+}
+</script>
 <link rel="stylesheet" href="site/site.css">
+<noscript><style>.reveal { opacity: 1 !important; transform: none !important; }</style></noscript>
+<script>
+/* Ahead of first paint, so a light-mode reader never sees a black flash. */
+(function () {
+  try {
+    var saved = localStorage.getItem('pc-theme');
+    if (saved !== 'light' && saved !== 'dark') {
+      saved = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    document.documentElement.dataset.theme = saved;
+  } catch (e) { document.documentElement.dataset.theme = 'dark'; }
+})();
+</script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='9' cy='20' r='3' fill='white'/><circle cx='17' cy='13' r='2.4' fill='white' opacity='.75'/><circle cx='24' cy='8' r='1.8' fill='white' opacity='.5'/></svg>">
 </head>
 <body>
@@ -24,12 +71,17 @@
       </svg>
       Particle Charts
     </a>
+    <span class="pill" id="version-pill">v1.0.0</span>
     <nav class="nav-links">
       <a href="#types" class="hide-sm">Charts</a>
+      <a href="#showcase" class="hide-sm">Showcase</a>
       <a href="#playground">Playground</a>
       <a href="#start" class="hide-sm">Quick start</a>
       <a href="#api">API</a>
-      <span class="pill" id="version-pill">v0.2.0</span>
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to light mode">
+        <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
+        <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
     </nav>
   </div>
 </header>
@@ -38,27 +90,28 @@
 
   <!-- ------------------------------------------------------------ hero -- -->
   <div class="wrap hero">
-    <h1>Charts made of light</h1>
-    <p class="lede">
+    <p class="hero-kicker reveal">Charticles</p>
+    <h1 class="reveal">Charts made of light</h1>
+    <p class="lede reveal">
       A zero-dependency charting library that renders your data as a living cloud of particles.
-      Line, bar, pie and donut — responsive, accessible, and driven by plain JSON.
+      Bar, line, bubble, radar, pie and donut — responsive, accessible, and driven by plain JSON.
     </p>
-    <div class="cta">
+    <div class="cta reveal">
       <a class="btn btn-primary" href="#start">Get started</a>
       <a class="btn btn-ghost" href="https://github.com/bwilliford/particleCharts">View source</a>
     </div>
   </div>
 
-  <div class="wrap">
+  <div class="wrap hero-stage reveal">
     <div class="hero-chart" id="hero-chart"></div>
-    <p class="hero-caption" id="hero-caption">a slow swell of growth, smoothed with a monotone curve</p>
+    <p class="hero-caption" id="hero-caption">a slow swell of growth, twelve months of it</p>
   </div>
 
   <!-- ----------------------------------------------------------- types -- -->
   <section id="types">
     <div class="wrap">
       <div class="section-head reveal">
-        <span class="eyebrow">Four types, one engine</span>
+        <span class="eyebrow">Six types, one engine</span>
         <h2>Every chart is the same particle field, arranged differently.</h2>
         <p>
           Axes, ticks and legends are generated for you from the data. Hover any chart —
@@ -69,14 +122,14 @@
 
       <div class="grid grid-2">
         <div class="card reveal">
-          <div class="card-head"><h3>Line</h3><span class="card-note">smooth, monotone, never overshoots</span></div>
-          <code>type: 'line'</code>
-          <div class="card-chart" id="demo-line"></div>
-        </div>
-        <div class="card reveal">
           <div class="card-head"><h3>Bar</h3><span class="card-note">grouped, stacked or horizontal</span></div>
           <code>type: 'bar'</code>
           <div class="card-chart" id="demo-bar"></div>
+        </div>
+        <div class="card reveal">
+          <div class="card-head"><h3>Line</h3><span class="card-note">smooth, monotone, never overshoots</span></div>
+          <code>type: 'line'</code>
+          <div class="card-chart" id="demo-line"></div>
         </div>
         <div class="card reveal">
           <div class="card-head"><h3>Pie</h3><span class="card-note">part-to-whole, direct labelled</span></div>
@@ -88,7 +141,58 @@
           <code>type: 'donut'</code>
           <div class="card-chart" id="demo-donut"></div>
         </div>
+        <div class="card reveal">
+          <div class="card-head"><h3>Bubble</h3><span class="card-note">a third value in the size</span></div>
+          <code>type: 'bubble'</code>
+          <div class="card-chart" id="demo-bubble"></div>
+        </div>
+        <div class="card reveal">
+          <div class="card-head"><h3>Radar</h3><span class="card-note">many measures, one silhouette</span></div>
+          <code>type: 'radar'</code>
+          <div class="card-chart" id="demo-radar"></div>
+        </div>
       </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- -------------------------------------------------------- showcase -- -->
+  <section id="showcase">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">Showcase</span>
+        <h2>Built with Particle Charts.</h2>
+        <p>Charts in the wild — from dashboards, decks and side projects.</p>
+      </div>
+
+      <!--
+        To add an entry, drop the image in assets/showcase/ and copy one figure
+        block below. Width is fluid; anything around 1200px wide holds up on a
+        HiDPI screen. `alt` is not optional — it is the only description a
+        screen reader gets.
+
+        <figure class="shot reveal">
+          <img src="assets/showcase/NAME.png" alt="WHAT THE CHART SHOWS" loading="lazy" width="1200" height="750">
+          <figcaption>Title <span>— where it is used</span></figcaption>
+        </figure>
+      -->
+
+      <div class="grid grid-2" id="showcase-grid">
+        <figure class="shot reveal">
+          <a href="https://drawdojo.com" target="_blank" rel="noopener">
+            <img src="assets/showcase/drawdojo.png"
+                 alt="DrawDojo's progress screen: a particle bar chart of practice counts across nine drawing lessons — lines and planes far ahead of ellipses, cubes and the rest — above a table of lessons with star ratings"
+                 loading="lazy" width="2880" height="1540">
+            <figcaption>DrawDojo <span>— gamified app for learning perspective drawing</span></figcaption>
+          </a>
+        </figure>
+      </div>
+
+      <p class="showcase-cta reveal">
+        Want to showcase your project?
+        Shoot me an email at <a href="mailto:blake@destinedstudio.com"><strong>blake@destinedstudio.com</strong></a>
+      </p>
     </div>
   </section>
 
@@ -108,8 +212,10 @@
           <div class="panel">
             <h4>Chart type</h4>
             <div class="seg" id="type-seg" role="group" aria-label="Chart type">
-              <button type="button" data-type="line" aria-pressed="true">Line</button>
-              <button type="button" data-type="bar" aria-pressed="false">Bar</button>
+              <button type="button" data-type="bar" aria-pressed="true">Bar</button>
+              <button type="button" data-type="line" aria-pressed="false">Line</button>
+              <button type="button" data-type="bubble" aria-pressed="false">Bubble</button>
+              <button type="button" data-type="radar" aria-pressed="false">Radar</button>
               <button type="button" data-type="pie" aria-pressed="false">Pie</button>
               <button type="button" data-type="donut" aria-pressed="false">Donut</button>
             </div>
@@ -122,16 +228,16 @@
               <input id="c-density" type="range" min="1" max="30" step="0.5" value="15">
             </div>
             <div class="ctrl">
-              <label for="c-size">Size <b id="v-size">0.5</b></label>
-              <input id="c-size" type="range" min="0.2" max="4" step="0.1" value="0.5">
+              <label for="c-size">Size <b id="v-size">0.8</b></label>
+              <input id="c-size" type="range" min="0.2" max="4" step="0.1" value="0.8">
             </div>
             <div class="ctrl">
-              <label for="c-bloom">Bloom <b id="v-bloom">0.50</b></label>
-              <input id="c-bloom" type="range" min="0" max="1" step="0.05" value="0.5">
+              <label for="c-bloom">Bloom <b id="v-bloom">0.80</b></label>
+              <input id="c-bloom" type="range" min="0" max="1" step="0.05" value="0.8">
             </div>
             <div class="ctrl">
-              <label for="c-jitter">Jitter <b id="v-jitter">2.0</b></label>
-              <input id="c-jitter" type="range" min="0" max="4" step="0.1" value="2">
+              <label for="c-jitter">Jitter <b id="v-jitter">1.0</b></label>
+              <input id="c-jitter" type="range" min="0" max="4" step="0.1" value="1">
             </div>
           </div>
 
@@ -248,7 +354,8 @@
         <p>
           Everything is optional except <code>data</code>. Nested groups
           (<code>particle</code>, <code>axis</code>, <code>legend</code>, <code>line</code>,
-          <code>bar</code>, <code>pie</code>) can also be set through the flat aliases shown here.
+          <code>bar</code>, <code>bubble</code>, <code>radar</code>, <code>pie</code>) can also be
+          set through the flat aliases shown here.
         </p>
       </div>
 
@@ -259,20 +366,20 @@
           </thead>
           <tbody>
             <tr class="group"><td colspan="3">Core</td></tr>
-            <tr><td>type</td><td>'line'</td><td>One of <code>line</code>, <code>area</code>, <code>bar</code>, <code>pie</code>, <code>donut</code>.</td></tr>
-            <tr><td>data</td><td>—</td><td>Numbers, <code>{label, value}</code> records, <code>{labels, values}</code>, or <code>{labels, series}</code>.</td></tr>
+            <tr><td>type</td><td>'line'</td><td>One of <code>line</code>, <code>area</code>, <code>bar</code>, <code>bubble</code>, <code>radar</code>, <code>pie</code>, <code>donut</code>.</td></tr>
+            <tr><td>data</td><td>—</td><td>Numbers, <code>{label, value}</code> records, <code>{labels, values}</code>, or <code>{labels, series}</code>. Bubble adds a third slot: <code>{x, y, r}</code>.</td></tr>
             <tr><td>background</td><td>'transparent'</td><td>Canvas fill painted behind the particles.</td></tr>
             <tr><td>padding</td><td>auto</td><td>Number, <code>[y, x]</code> or a box. Left alone, it is measured from the real axis labels.</td></tr>
             <tr><td>responsive</td><td>true</td><td>Re-layout on container resize.</td></tr>
 
             <tr class="group"><td colspan="3">Particles</td></tr>
             <tr><td>particleColor</td><td>palette</td><td>A colour, an array of colours, or <code>fn(index, series)</code>.</td></tr>
-            <tr><td>particleSize</td><td>0.5</td><td>Base particle radius in CSS pixels.</td></tr>
+            <tr><td>particleSize</td><td>0.8</td><td>Base particle radius in CSS pixels.</td></tr>
             <tr><td>particleDensity</td><td>15</td><td>Multiplier on the auto-computed particle budget.</td></tr>
             <tr><td>particleCount</td><td>50000</td><td>Hard ceiling on particles, whatever the density.</td></tr>
-            <tr><td>particleBloom</td><td>0.5</td><td>Additive glow strength, 0–1.</td></tr>
+            <tr><td>particleBloom</td><td>0.8</td><td>Additive glow strength, 0–1.</td></tr>
             <tr><td>particleOpacity</td><td>0.7</td><td>Global particle alpha. Kept under 1 so additive stacking does not clip hues to white.</td></tr>
-            <tr><td>particleJitter</td><td>2</td><td>Idle drift amplitude in pixels — the “alive” wobble.</td></tr>
+            <tr><td>particleJitter</td><td>1</td><td>Idle drift amplitude in pixels — the “alive” wobble.</td></tr>
             <tr><td>particleSpeed</td><td>0.085</td><td>Spring stiffness pulling each particle to its target.</td></tr>
             <tr><td>particleShape</td><td>'soft'</td><td>Particles are circles. <code>soft</code> adds a glow sprite once they are big enough for the halo to read; <code>square</code> forces rectangles.</td></tr>
 
@@ -282,7 +389,14 @@
             <tr><td>showLegend</td><td>true</td><td>Legend — rendered only when there is more than one series or slice.</td></tr>
             <tr><td>showTooltip</td><td>true</td><td>Hover tooltip and crosshair.</td></tr>
             <tr><td>showValues</td><td>false</td><td>Print values next to the marks.</td></tr>
-            <tr><td>legendPosition</td><td>'top'</td><td><code>top</code>, <code>bottom</code>, <code>left</code>, <code>right</code>.</td></tr>
+            <tr><td>legendPosition</td><td>per type</td><td><code>top</code>, <code>bottom</code>, <code>left</code>, <code>right</code>. Defaults to <code>bottom</code> where colour keys a series — line, area, bar, bubble, radar — and <code>top</code> for pie and donut.</td></tr>
+            <tr><td>legendAlign</td><td>per type</td><td><code>start</code>, <code>center</code>, <code>end</code>. <code>center</code> under the plot, <code>start</code> otherwise.</td></tr>
+            <tr><td>theme</td><td>'dark'</td><td><code>dark</code> or <code>light</code>. Sets the chrome colours below in one go — anything you set explicitly still wins. Particle colours are never themed.</td></tr>
+            <tr><td>axisColor</td><td>rgba(255,255,255,.2)</td><td>Colour of the axis lines.</td></tr>
+            <tr><td>gridColor</td><td>rgba(255,255,255,.1)</td><td>Colour of the grid lines behind the plot.</td></tr>
+            <tr><td>textColor</td><td>rgba(255,255,255,.6)</td><td>Colour of the tick labels and axis titles.</td></tr>
+            <tr><td>crosshairColor</td><td>rgba(255,255,255,.22)</td><td>Colour of the hover crosshair.</td></tr>
+            <tr><td>fontFamily / fontSize</td><td>system sans / 11</td><td>Typeface and size for axis labels.</td></tr>
             <tr><td>min / max</td><td>auto</td><td>Pin the value axis instead of deriving it from the data.</td></tr>
             <tr><td>valueFormat</td><td>compact</td><td><code>fn(value) → string</code> for ticks, labels and tooltips.</td></tr>
 
@@ -292,6 +406,11 @@
             <tr><td>lineWidth</td><td>3.2</td><td>Thickness of the particle band forming the stroke.</td></tr>
             <tr><td>stacked</td><td>false</td><td>Stack bar series instead of grouping them.</td></tr>
             <tr><td>horizontal</td><td>false</td><td>Lay bars on their side.</td></tr>
+            <tr><td>minRadius / maxRadius</td><td>5 / 30</td><td>Bubble radius range. Values map between the two by <em>area</em>, so twice the value covers twice the ink.</td></tr>
+            <tr><td>bubble.edgeFade</td><td>0.35</td><td>Feathering of the bubble rim, 0–1.</td></tr>
+            <tr><td>levels</td><td>4</td><td>Radar web rings between the centre and the edge.</td></tr>
+            <tr><td>webShape</td><td>'polygon'</td><td>Radar web: <code>polygon</code> follows the spokes, <code>circle</code> draws true rings.</td></tr>
+            <tr><td>radar.fill / fillAmount</td><td>true / 0.55</td><td>Fill the enclosed area, and the share of particles it takes.</td></tr>
             <tr><td>innerRadius</td><td>0 / 0.62</td><td>Donut hole, as a fraction of the outer radius.</td></tr>
             <tr><td>startAngle</td><td>-90</td><td>Where the first slice begins, in degrees.</td></tr>
             <tr><td>padAngle</td><td>1.2</td><td>Gap between slices, in degrees.</td></tr>
@@ -312,7 +431,8 @@
 
 <footer>
   <div class="wrap footer-inner">
-    <span>Particle Charts — MIT licensed.</span>
+    <span class="footer-love">Created with <svg class="heart" viewBox="0 0 24 24" fill="currentColor" role="img" aria-label="love"><path d="M12 21s-7.5-4.7-9.6-9A5.2 5.2 0 0 1 12 6.2a5.2 5.2 0 0 1 9.6 5.8C19.5 16.3 12 21 12 21z"/></svg> by <a href="https://blakewilliford.com" target="_blank" rel="noopener">Blake Williford</a> of <a href="https://destinedstudio.com" target="_blank" rel="noopener">Destined Studio</a></span>
+    <a class="kofi" href="https://ko-fi.com/E1E6N4Q86" target="_blank" rel="noopener"><img height="36" style="border:0px;height:36px;" src="https://storage.ko-fi.com/cdn/kofi6.png?v=6" border="0" alt="Buy Me a Coffee at ko-fi.com"></a>
     <span class="spacer"></span>
     <a href="#top">Back to top</a>
     <a href="https://github.com/bwilliford/particleCharts">GitHub</a>

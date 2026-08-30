@@ -9,7 +9,7 @@
 Data visualisation made of particles. Line, area, bar, pie and donut charts
 rendered as living clouds of light on a `<canvas>`, driven by plain JSON.
 
-Zero runtime dependencies. One file — **17 kB minified + gzipped**. Responsive,
+Zero runtime dependencies. One file — **20 kB minified + gzipped**. Responsive,
 accessible and typed.
 
 ```js
@@ -30,7 +30,7 @@ new ParticleChart('#chart', {
 **CDN** — nothing to configure, no build step, works over `file://` too:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/particle-charts@0/dist/particle-charts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/particle-charts@1/dist/particle-charts.min.js"></script>
 
 <div id="chart" style="height: 320px"></div>
 <script>
@@ -41,8 +41,8 @@ new ParticleChart('#chart', {
 </script>
 ```
 
-unpkg works the same way: `https://unpkg.com/particle-charts@0/dist/particle-charts.min.js`.
-Drop the `.min` for the readable build. Pin an exact version (`@0.2.0`) in
+unpkg works the same way: `https://unpkg.com/particle-charts@1/dist/particle-charts.min.js`.
+Drop the `.min` for the readable build. Pin an exact version (`@1.0.0`) in
 production rather than a range.
 
 **npm** — ES module source is shipped as-is, with TypeScript declarations:
@@ -66,7 +66,7 @@ const { ParticleChart } = require('particle-charts');
 
 | File | Use |
 |---|---|
-| `dist/particle-charts.min.js` | CDN / `<script>` — 17 kB gzipped |
+| `dist/particle-charts.min.js` | CDN / `<script>` — 20 kB gzipped |
 | `dist/particle-charts.js` | same, unminified, for debugging |
 | `dist/particle-charts.cjs` | `require()` |
 | `src/index.js` | `import` — what bundlers get |
@@ -94,13 +94,37 @@ data: {                                                    // multi-series
   ]
 }
 data: { series: [{ name: 'Load', data: [{ x: 0, y: 12 }, { x: 5, y: 19 }] }] }
+data: { series: [{ name: 'Teams', data: [{ x: 12, y: 34, r: 18 }] }] }  // bubble
 ```
 
 `null`, `undefined` and unparseable values become gaps: a line breaks at them,
-a bar is simply not drawn.
+a bar is simply not drawn, and a radar polygon skips the spoke rather than
+pinning it to the centre.
 
-When every x value is numeric, line charts switch to a continuous x axis
-automatically. Otherwise the labels are treated as categories.
+When every x value is numeric, line and bubble charts switch to a continuous x
+axis automatically. Otherwise the labels are treated as categories.
+
+### The third value
+
+The bubble chart reads a size from a third slot — `r`, `size`, `z`, `radius` or
+`weight` on a point object, the third element of a tuple, or a parallel `sizes`
+array. Every other chart type ignores it.
+
+```js
+data: [{ x: 12, y: 34, r: 18 }, { x: 26, y: 52, r: 44 }]   // point objects
+data: [['Jan', 34, 18], ['Feb', 52, 44]]                   // tuples
+data: { labels: ['Jan', 'Feb'], values: [34, 52], sizes: [18, 44] }
+```
+
+Bubble series keep their own x positions, so two series can sit at genuinely
+different x rather than being forced onto a shared set of categories. The x axis
+becomes continuous with round ticks of its own — the marks fall between them,
+where their values put them.
+
+Sizes map to radius **by area**: a value twice as large covers twice the ink.
+Scaling the radius directly instead — the usual bubble-chart mistake — would
+draw it four times as large. Without any size data the chart still works; every
+mark takes the mid radius and you get a plain scatter.
 
 ---
 
@@ -111,6 +135,8 @@ automatically. Otherwise the labels are treated as categories.
 | `line` | Monotone-cubic smoothing by default; never overshoots the data. |
 | `area` | The same chart with the fill under the curve turned on. |
 | `bar` | Grouped by default; `stacked: true` and `horizontal: true` available. |
+| `bubble` | Scatter with a third value in the mark size. Aliased as `scatter`. |
+| `radar` | One spoke per label, one closed polygon per series. Aliased as `spider`. |
 | `pie` | Reads the first series; each category gets its own colour slot. |
 | `donut` | `pie` with `innerRadius: 0.62` and a running total in the hole. |
 
@@ -118,7 +144,8 @@ automatically. Otherwise the labels are treated as categories.
 
 ## Options
 
-Nested groups (`particle`, `axis`, `legend`, `line`, `bar`, `pie`) can be set
+Nested groups (`particle`, `axis`, `legend`, `line`, `bar`, `bubble`, `radar`,
+`pie`) can be set
 either way — `{ particleBloom: 0.8 }` and `{ particle: { bloom: 0.8 } }` are the
 same thing, and the nested form wins if you write both.
 
@@ -142,13 +169,13 @@ same thing, and the nested form wins if you write both.
 | Option | Default | Description |
 |---|---|---|
 | `particleColor` | palette | A colour, an array of colours, or `fn(index, series)`. |
-| `particleSize` | `0.5` | Particle radius in CSS pixels. At or below 1.6 particles are drawn as pixel-snapped rects — crisp, and much cheaper than sprites. |
+| `particleSize` | `0.8` | Particle radius in CSS pixels. At or below 1.6 particles are drawn as pixel-snapped rects — crisp, and much cheaper than sprites. |
 | `particleSizeJitter` | `0` | 0–1 random size spread. `0` keeps every particle identical. |
 | `particleDensity` | `15` | Multiplier on the auto-computed budget. |
 | `particleCount` | `50000` | Hard ceiling, whatever the density. |
-| `particleBloom` | `0.5` | Additive glow strength, 0–1. |
+| `particleBloom` | `0.8` | Additive glow strength, 0–1. |
 | `particleOpacity` | `0.7` | Global particle alpha. Kept under 1 so additive stacking does not clip hues to white. |
-| `particleJitter` | `2` | Idle drift amplitude in pixels. |
+| `particleJitter` | `1` | Idle drift amplitude in pixels. |
 | `particleSpeed` | `0.085` | Spring stiffness toward the target. |
 | `particleShape` | `'soft'` | Particles are circles; `soft` adds a glow sprite once they are large enough for the halo to read. `square` forces rectangles. |
 
@@ -183,14 +210,44 @@ white wherever the chart is dense.
 | `showLegend` | `true` | Rendered only when there is more than one series or slice. |
 | `showTooltip` | `true` | Hover tooltip and crosshair. |
 | `showValues` | `false` | Print values next to the marks. |
-| `legendPosition` | `'top'` | `top`, `bottom`, `left`, `right`. |
+| `legendPosition` | type-driven | `top`, `bottom`, `left`, `right`. Defaults to `bottom` where colour keys a series (line, area, bar, bubble, radar) and `top` for pie and donut. |
+| `legendAlign` | type-driven | `start`, `center`, `end`. Follows `legendPosition`: `center` under the plot, `start` otherwise. |
 | `min` / `max` | auto | Pin the value axis. |
 | `beginAtZero` | `true` | Pull the value domain to include zero. |
 | `ticks` | `5` | Approximate tick count; nice-number rounding picks the real one. |
 | `valueFormat` | compact | `fn(value) → string` for ticks, labels and tooltips. |
 | `xTitle` / `yTitle` | `''` | Axis titles. |
-| `axisColor`, `gridColor`, `textColor`, `fontFamily` | dark-theme values | Axis furniture styling. |
+| `theme` | `'dark'` | `dark` or `light`. Sets the chrome colours below in one go; anything you set explicitly still wins. |
+| `axisColor` | `rgba(255,255,255,0.2)` | Colour of the axis lines. |
+| `gridColor` | `rgba(255,255,255,0.1)` | Colour of the grid lines behind the plot. |
+| `textColor` | `rgba(255,255,255,0.6)` | Colour of the tick labels and axis titles. |
+| `crosshairColor` | `rgba(255,255,255,0.22)` | Colour of the hover crosshair. |
+| `fontFamily` / `fontSize` | system sans / `11` | Typeface and size for axis labels. |
 | `tooltip.format` | — | `fn({ title, entries }) → HTML string`. |
+
+#### Light mode
+
+The chrome — axis, grid, labels, crosshair, legend and tooltip — defaults to a
+dark ground. `theme: 'light'` swaps it for dark grey on white:
+
+```js
+new ParticleChart('#chart', { data, theme: 'light' });
+
+// or follow the reader's OS setting, and keep following it
+const media = matchMedia('(prefers-color-scheme: light)');
+const sync = () => chart.setOptions({ theme: media.matches ? 'light' : 'dark' });
+media.addEventListener('change', sync);
+sync();
+```
+
+Particle colours are never themed — the default palette is chosen to hold up on
+either ground. If you pass your own neons, they will want darkening for a white
+page. Any chrome colour you set explicitly outranks the theme, and survives
+later `setOptions` calls; switching theme is the one thing that repaints them.
+The exact values are exported as `themes.dark` and `themes.light`.
+
+Bloom is additive, and additive light on a white page only washes the hue out.
+On a light ground, trade it for opacity: `particleBloom: 0.15, particleOpacity: 0.9`.
 
 ### Per type
 
@@ -206,6 +263,17 @@ white wherever the chart is dense.
 | `barPadding` | `0.3` | bar — gap between categories, 0–1 of the band. |
 | `bar.fade` | `0.45` | bar — how much the fill thins toward the growing end. |
 | `bar.radius` | `4` | bar — rounded cap radius. |
+| `minRadius` | `5` | bubble — smallest bubble radius in pixels. |
+| `maxRadius` | `30` | bubble — largest bubble radius. Values map between the two by **area**. |
+| `bubble.edgeFade` | `0.35` | bubble — feathering of the rim, 0–1. |
+| `bubble.outline` | `false` | bubble — ring every bubble behind its cloud. The hovered one is ringed either way. |
+| `bubble.minValue` / `maxValue` | auto | bubble — pin the size domain instead of taking it from the data. |
+| `levels` | `4` | radar — web rings between the centre and the edge. |
+| `webShape` | `'polygon'` | radar — `polygon` follows the spokes, `circle` draws true rings. |
+| `radar.width` | `2.6` | radar — thickness of each series' outline band. |
+| `radar.fill` | `true` | radar — fill the enclosed area with particles. |
+| `radar.fillAmount` | `0.55` | radar — share of particles spent on the fill. |
+| `radar.startAngle` | `-90` | radar — degrees; `-90` puts the first spoke straight up. |
 | `innerRadius` | `0` / `0.62` | pie / donut — hole size as a fraction of the outer radius. |
 | `startAngle` | `-90` | pie — degrees; 0 is 3 o'clock. |
 | `padAngle` | `1.2` | pie — gap between slices, in degrees. |
@@ -306,9 +374,23 @@ circles. Idle drift comes from a sine lookup table rather than `Math.sin`, which
 matters at tens of thousands of particles a frame.
 
 A chart stops scheduling frames entirely once its particles arrive, provided
-`particleJitter` is `0` — so a static chart costs nothing. With drift enabled
-it animates continuously by design; if you have
-several charts on a long page, pause them while the user scrolls:
+`particleJitter` is `0` — so a static chart costs nothing.
+
+With drift enabled it keeps animating by design, but not at full rate: once the
+particles have settled the only motion left is a slow sine wobble, so it is
+repainted at ~30fps rather than at the display's rate. On a 120Hz screen that is
+a quarter of the work, for a difference nobody can see. Frames in flight — the
+entrance, a data change, a resize — are never throttled.
+
+Two other things happen for you. Charts pause completely when the tab is hidden
+or when they scroll out of view (`pauseWhenHidden`, on by default, via
+`IntersectionObserver`). And the axis spec — every tick label formatted and
+measured against the canvas font — is rebuilt on layout, not on every frame;
+`measureText` is one of the slower Canvas2D calls and none of its inputs change
+between layouts.
+
+If you have several charts on a long page, pausing them while the user scrolls
+is still worth it, since scrolling is when the main thread is busiest:
 
 ```js
 let t = null;
@@ -319,9 +401,10 @@ addEventListener('scroll', () => {
 }, { passive: true });
 ```
 
-Charts already pause on their own when the tab is hidden or they scroll out of
-view. If a chart feels sparse or heavy, `particleDensity` is the one knob to
-turn.
+If a chart feels sparse or heavy, `particleDensity` is the one knob to turn — it
+scales the particle budget linearly, and the particle count is what the frame
+cost is made of. At the default of `15` a 600x320 plot is worth roughly 16k
+particles; at `5` it is roughly 6k, which still reads as a solid shape.
 
 ## Browser support
 
@@ -329,6 +412,21 @@ Any browser with `ResizeObserver` and Canvas2D — Chrome/Edge 64+, Firefox 69+,
 Safari 13.1+. `IntersectionObserver` and `ctx.filter` are used when present and
 degraded gracefully when not (no offscreen pausing, single-pass bloom).
 
+## Showcase
+
+Built with Particle Charts:
+
+- **[DrawDojo](https://drawdojo.com)** — gamified app for learning perspective
+  drawing.
+
+Want your project listed? Email **<blake@destinedstudio.com>**.
+
+## Support
+
+Enjoying the library? Please consider
+[buying me a coffee](https://ko-fi.com/E1E6N4Q86) ☕
+
 ## Licence
 
-MIT
+MIT © [Blake Williford](https://blakewilliford.com) of
+[Destined Studio](https://destinedstudio.com).

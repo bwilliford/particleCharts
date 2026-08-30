@@ -36,7 +36,9 @@ const MODULES = [
   'charts/cartesian.js',
   'charts/line.js',
   'charts/bar.js',
+  'charts/bubble.js',
   'charts/pie.js',
+  'charts/radar.js',
   'index.js'
 ];
 
@@ -45,22 +47,31 @@ const EXPORTS = [
   'Chart',
   'LineChart',
   'BarChart',
+  'BubbleChart',
   'PieChart',
+  'RadarChart',
   'line',
   'area',
   'bar',
+  'bubble',
   'pie',
   'donut',
+  'radar',
   'defaults',
   'palette',
+  'themes',
   'version'
 ];
 
-const ALIASES = { defaults: 'DEFAULTS', palette: 'DEFAULT_PALETTE' };
+const ALIASES = { defaults: 'DEFAULTS', palette: 'DEFAULT_PALETTE', themes: 'THEMES' };
 
 const IMPORT_RE = /^\s*import\s+[^;]*?from\s*['"][^'"]+['"];?\s*$/;
 const REEXPORT_RE = /^\s*export\s*\{[^}]*\}\s*(from\s*['"][^'"]+['"])?;?\s*$/;
-const DECL_RE = /^export\s+(?:async\s+)?(?:function|class|const|let|var)\s+([A-Za-z_$][\w$]*)/;
+/* Every top-level declaration, exported or not. Module-private names share the
+   bundle's single scope just as exported ones do, so both must be unique — and
+   a collision between two private consts is exactly the kind that would
+   otherwise slip through to a runtime SyntaxError in the built file. */
+const DECL_RE = /^(?:export\s+)?(?:async\s+)?(?:function|class|const|let|var)\s+([A-Za-z_$][\w$]*)/;
 
 function strip(source, file) {
   const declared = [];
@@ -72,6 +83,12 @@ function strip(source, file) {
     if (REEXPORT_RE.test(line)) continue;
     if (/^\s*import\s+/.test(line) && !line.includes('from')) {
       throw new Error(`${file}: multi-line or side-effect imports are not supported by this bundler`);
+    }
+    /* A re-export the regex above did not match is almost always one wrapped
+       across lines. Left alone it lands in the bundle as bare `X as y,` — which
+       is a syntax error only whoever runs the built file ever sees. */
+    if (/^\s*export\s*\{/.test(line)) {
+      throw new Error(`${file}: re-exports must be on one line for this bundler — got: ${line.trim()}`);
     }
     const decl = DECL_RE.exec(line);
     if (decl) declared.push(decl[1]);
@@ -98,6 +115,17 @@ async function build() {
       seen.set(name, rel);
     }
     chunks.push(`// ---- src/${rel} ${'-'.repeat(Math.max(0, 62 - rel.length))}\n${code.trim()}\n`);
+  }
+
+  /* Every public name must actually exist in the bundle. Without this an
+     export added to src/index.js but forgotten here — or a module missing from
+     MODULES — ships as `undefined` on the global, and only in the built file. */
+  const missing = EXPORTS.filter((name) => name !== 'version' && !seen.has(ALIASES[name] || name));
+  if (missing.length) {
+    throw new Error(
+      'Exported but never declared in the bundled modules: ' + missing.join(', ') +
+        '. Add the module to MODULES, or the name to EXPORTS/ALIASES.'
+    );
   }
 
   const returned = EXPORTS.map((name) => {

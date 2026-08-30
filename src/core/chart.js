@@ -24,6 +24,14 @@ const REFERENCE_AREA = 640 * 360;
 const REFERENCE_SIZE = 1.6;
 /** Particles for a reference-area plot at density 1 and reference size. */
 const BASE_BUDGET = 700;
+/**
+ * Frame budget for a settled chart: idle drift is repainted at ~30fps. Set a
+ * shade under 1000/30 on purpose — at exactly 33.33ms the check lands on the
+ * 60Hz frame boundary, where float error decides it, and the drift stutters
+ * between every-second and every-third frame. Under the boundary it is always
+ * every second frame at 60Hz, every fourth at 120Hz.
+ */
+const DRIFT_FRAME_MS = 1000 / 32;
 
 export class Chart {
   constructor(target, config) {
@@ -86,9 +94,18 @@ export class Chart {
 
   observeResize() {
     if (!this.options.responsive || typeof ResizeObserver === 'undefined') return;
+    /**
+     * A dragged window fires this every frame, and every layout re-measures the
+     * axis and rebuilds every particle target — the most expensive thing the
+     * chart does. Coalesce to one layout per frame, and drop the intermediate
+     * sizes rather than laying out for sizes nobody ever sees.
+     */
     this.resizeObserver = new ResizeObserver(() => {
-      if (this.destroyed) return;
-      this.layout({ resize: true });
+      if (this.destroyed || this.resizeFrame) return;
+      this.resizeFrame = requestAnimationFrame(() => {
+        this.resizeFrame = 0;
+        if (!this.destroyed) this.layout({ resize: true });
+      });
     });
     this.resizeObserver.observe(this.plotHost);
   }
@@ -236,14 +253,26 @@ export class Chart {
     const tick = (now) => {
       this.frame = 0;
       if (this.destroyed) return;
-      const dt = this.lastTime ? Math.min(now - this.lastTime, 64) : 16.7;
-      this.lastTime = now;
-      this.field.update(dt, this.options.particle);
-      this.draw(now);
+      const cfg = this.options.particle;
+
+      /**
+       * Particles in flight need every frame. Once they have arrived the only
+       * motion left is the idle drift — a slow sine wobble that samples the
+       * same at 30fps as at 60 — so paint it half as often and hand the rest
+       * of the frame budget back to the page. On a 120Hz display this cuts the
+       * work by four rather than two, which is why it is a time budget and not
+       * a frame counter.
+       */
+      if (!this.field.settled || now - this.lastTime >= DRIFT_FRAME_MS) {
+        const dt = this.lastTime ? Math.min(now - this.lastTime, 64) : 16.7;
+        this.lastTime = now;
+        this.field.update(dt, cfg);
+        this.draw(now);
+      }
+
       // A chart with no idle drift has nothing left to animate once its
       // particles arrive, so stop burning frames until something changes.
       // `start()` is called again by layout, update and hover.
-      const cfg = this.options.particle;
       const idle = this.field.settled && (!this.motionOk || !cfg.jitter);
       if (this.visible && !idle) this.frame = requestAnimationFrame(tick);
     };
@@ -261,14 +290,25 @@ export class Chart {
     r.beginFrame(opts.background);
     const ctx = r.ctx;
 
-    const particleCfg = this.motionOk
-      ? opts.particle
-      : (this.staticCfg = { ...opts.particle, jitter: 0 });
+    const particleCfg = this.motionOk ? opts.particle : this.stillConfig();
 
     this.drawBackdrop(ctx);
     r.paintScene(this.field.particles, particleCfg, now);
     r.composite(particleCfg);
     this.drawForeground(ctx);
+  }
+
+  /**
+   * The particle config with drift removed, for readers who asked for reduced
+   * motion. Rebuilt only when the options object identity changes — this used
+   * to allocate a fresh object on every single frame.
+   */
+  stillConfig() {
+    if (this.stillFrom !== this.options.particle) {
+      this.stillFrom = this.options.particle;
+      this.stillCfg = { ...this.options.particle, jitter: 0 };
+    }
+    return this.stillCfg;
   }
 
   // ---------------------------------------------------------- public API ---
@@ -311,6 +351,7 @@ export class Chart {
     if (this.destroyed) return;
     this.destroyed = true;
     this.stop();
+    if (this.resizeFrame) cancelAnimationFrame(this.resizeFrame);
     if (this.resizeObserver) this.resizeObserver.disconnect();
     if (this.intersectionObserver) this.intersectionObserver.disconnect();
     if (this.onVisibility) document.removeEventListener('visibilitychange', this.onVisibility);

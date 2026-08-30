@@ -193,6 +193,61 @@ export function sampleSector(cx, cy, r0, r1, a0, a1, count, rng, edgeFade, emit)
   }
 }
 
+/**
+ * Fill a polygon by fanning triangles out from a hub — the radar chart's web
+ * centre. Triangles are picked in proportion to their area so density stays
+ * even however lopsided the shape is, and the point inside each is drawn with
+ * the standard "fold the unit square" trick rather than by rejection, which
+ * keeps the emitted count exactly `count`.
+ *
+ * `fade` > 0 thins particles toward the hub, so the fill reads as a rim of
+ * light around the edge rather than a solid disc that buries the outline.
+ */
+export function samplePolygonFan(hub, points, count, rng, fade, emit) {
+  if (points.length < 3 || count <= 0) return;
+
+  const areas = [];
+  let total = 0;
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i];
+    const b = points[(i + 1) % points.length];
+    const area = Math.abs(
+      (a.x - hub.x) * (b.y - hub.y) - (b.x - hub.x) * (a.y - hub.y)
+    ) / 2;
+    total += area;
+    areas.push(total);
+  }
+  if (total <= 0) return;
+
+  const bias = 1 + clamp(fade, 0, 1) * 1.4;
+  let t = 0;
+  for (let k = 0; k < count; k++) {
+    const target = ((k + rng()) / count) * total;
+    while (t < areas.length - 1 && areas[t] < target) t++;
+    const a = points[t];
+    const b = points[(t + 1) % points.length];
+
+    // Uniform point in the triangle (hub, a, b): fold the square back in.
+    let u = rng();
+    let v = rng();
+    if (u + v > 1) {
+      u = 1 - u;
+      v = 1 - v;
+    }
+    // Push the sample outward from the hub, leaving the middle sparse.
+    const pull = Math.pow(rng(), 1 / bias);
+    const w = (u + v) === 0 ? 0 : pull / (u + v);
+    const su = u * w;
+    const sv = v * w;
+
+    emit(
+      hub.x + (a.x - hub.x) * su + (b.x - hub.x) * sv,
+      hub.y + (a.y - hub.y) * su + (b.y - hub.y) * sv,
+      clamp(su + sv, 0, 1)
+    );
+  }
+}
+
 /** A soft blob of particles, used for data-point markers. */
 export function sampleDisc(cx, cy, radius, count, rng, emit) {
   for (let i = 0; i < count; i++) {

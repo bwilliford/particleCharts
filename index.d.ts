@@ -24,10 +24,22 @@ export interface PointObject {
   count?: Primitive;
   total?: Primitive;
   amount?: Primitive;
+  /** The bubble chart's third dimension. Ignored by every other type. */
+  r?: Primitive;
+  size?: Primitive;
+  z?: Primitive;
+  radius?: Primitive;
+  weight?: Primitive;
 }
 
-/** One series' points: bare numbers, `{x, y}` objects, or `[label, value]` pairs. */
-export type SeriesPoints = Array<number | null | PointObject | [Primitive, Primitive]>;
+/**
+ * One series' points: bare numbers, `{x, y}` objects, or `[label, value]`
+ * pairs. A third slot — `{x, y, r}` or `[label, value, size]` — is the bubble
+ * chart's size dimension.
+ */
+export type SeriesPoints = Array<
+  number | null | PointObject | [Primitive, Primitive] | [Primitive, Primitive, Primitive]
+>;
 
 export interface SeriesInput {
   name?: string;
@@ -56,6 +68,8 @@ export type ChartData =
       xValues?: Array<number | null>;
       values?: SeriesPoints;
       data?: SeriesPoints;
+      /** Parallel bubble sizes, when values are given as a flat array. */
+      sizes?: Array<number | null>;
       series?: SeriesInput[];
       datasets?: SeriesInput[];
       name?: string;
@@ -65,7 +79,11 @@ export type ChartData =
 
 // ------------------------------------------------------------- options ------
 
-export type ChartType = 'line' | 'area' | 'bar' | 'pie' | 'donut' | 'column';
+export type ChartType =
+  | 'line' | 'area' | 'bar' | 'column'
+  | 'bubble' | 'scatter'
+  | 'pie' | 'donut'
+  | 'radar' | 'spider';
 
 /** A colour, a list of colours assigned by slot, or a function of the slot index. */
 export type ColorSpec = string | string[] | ((index: number, item: unknown) => string);
@@ -106,6 +124,8 @@ export interface AxisOptions {
   color?: string;
   gridColor?: string;
   textColor?: string;
+  /** Colour of the hover crosshair. */
+  crosshairColor?: string;
   fontFamily?: string;
   fontSize?: number;
   /** Approximate tick count; nice-number rounding picks the real one. */
@@ -178,6 +198,38 @@ export interface BarOptions {
   radius?: number;
 }
 
+export interface BubbleOptions {
+  /** Smallest bubble radius in pixels. */
+  minRadius?: number;
+  /** Largest bubble radius in pixels. Values map between the two by area. */
+  maxRadius?: number;
+  /** Feather the rim, 0–1. */
+  edgeFade?: number;
+  /** Pin the size domain instead of taking it from the data. */
+  minValue?: number | null;
+  maxValue?: number | null;
+  /** Ring every bubble behind its cloud. The hovered one is ringed regardless. */
+  outline?: boolean;
+}
+
+export interface RadarOptions {
+  /** Web rings between the centre and the outer edge. */
+  levels?: number;
+  /** `'polygon'` follows the spokes; `'circle'` draws true rings. */
+  shape?: 'polygon' | 'circle';
+  /** Thickness of the particle band forming each outline, in pixels. */
+  width?: number;
+  fill?: boolean;
+  /** Share of a series' particles spent on the fill, 0–1. */
+  fillAmount?: number;
+  /** >0 thins the fill toward the centre. */
+  fillFade?: number;
+  points?: boolean;
+  pointRadius?: number;
+  /** Degrees; -90 puts the first spoke straight up. */
+  startAngle?: number;
+}
+
 export interface PieOptions {
   /** Fraction of the outer radius. `type: 'donut'` defaults this to 0.62. */
   innerRadius?: number;
@@ -194,9 +246,17 @@ export interface PieOptions {
   center?: 'auto' | 'total' | 'none' | string;
 }
 
+export type ChartTheme = 'dark' | 'light';
+
 export interface ChartOptions {
   type?: ChartType;
   data?: ChartData;
+
+  /**
+   * Which chrome palette the axis, legend and tooltip default to. Particle
+   * colours are never themed. Any colour set explicitly wins over the theme.
+   */
+  theme?: ChartTheme;
 
   background?: string;
   /** Left unset, padding is measured from the axis labels actually drawn. */
@@ -224,6 +284,8 @@ export interface ChartOptions {
   tooltip?: TooltipOptions;
   line?: LineOptions;
   bar?: BarOptions;
+  bubble?: BubbleOptions;
+  radar?: RadarOptions;
   pie?: PieOptions;
 
   // ---- flat aliases ----
@@ -237,6 +299,10 @@ export interface ChartOptions {
   particleSpeed?: number;
   particleShape?: ParticleOptions['shape'];
   colors?: ColorSpec;
+  minRadius?: BubbleOptions['minRadius'];
+  maxRadius?: BubbleOptions['maxRadius'];
+  levels?: RadarOptions['levels'];
+  webShape?: RadarOptions['shape'];
   curve?: LineOptions['curve'];
   fillArea?: boolean;
   lineWidth?: number;
@@ -248,6 +314,7 @@ export interface ChartOptions {
   startAngle?: number;
   padAngle?: number;
   legendPosition?: LegendOptions['position'];
+  legendAlign?: LegendOptions['align'];
   min?: number | null;
   max?: number | null;
   beginAtZero?: boolean;
@@ -260,6 +327,7 @@ export interface ChartOptions {
   textColor?: string;
   axisColor?: string;
   gridColor?: string;
+  crosshairColor?: string;
 }
 
 // --------------------------------------------------------------- chart ------
@@ -269,6 +337,14 @@ export interface NormalisedSeries {
   color: string;
   key: string;
   values: Array<number | null>;
+  /** Bubble sizes, present only when the input carried a third value. */
+  sizes?: Array<number | null>;
+  /**
+   * This series' own numeric x positions, present only when its points carried
+   * them. The shared `xValues` can hold one x per index; a scatter with two
+   * series needs one per series.
+   */
+  xs?: Array<number | null>;
 }
 
 export interface NormalisedData {
@@ -314,7 +390,9 @@ export declare class Chart {
 
 export declare class LineChart extends Chart {}
 export declare class BarChart extends Chart {}
+export declare class BubbleChart extends Chart {}
 export declare class PieChart extends Chart {}
+export declare class RadarChart extends Chart {}
 
 /** Create a chart. Works with or without `new`; the type picks the class. */
 export declare function ParticleChart(target: Element | string, config?: ChartOptions): Chart;
@@ -325,14 +403,26 @@ export declare namespace ParticleChart {
 export declare function line(target: Element | string, data: ChartData, options?: ChartOptions): Chart;
 export declare function area(target: Element | string, data: ChartData, options?: ChartOptions): Chart;
 export declare function bar(target: Element | string, data: ChartData, options?: ChartOptions): Chart;
+export declare function bubble(target: Element | string, data: ChartData, options?: ChartOptions): Chart;
 export declare function pie(target: Element | string, data: ChartData, options?: ChartOptions): Chart;
 export declare function donut(target: Element | string, data: ChartData, options?: ChartOptions): Chart;
+export declare function radar(target: Element | string, data: ChartData, options?: ChartOptions): Chart;
 
 /** The resolved default options object. */
 export declare const defaults: Required<
-  Pick<ChartOptions, 'type' | 'particle' | 'axis' | 'legend' | 'tooltip' | 'line' | 'bar' | 'pie'>
+  Pick<
+    ChartOptions,
+    'type' | 'particle' | 'axis' | 'legend' | 'tooltip' | 'line' | 'bar' | 'bubble' | 'radar' | 'pie'
+  >
 > &
   ChartOptions;
 
 /** The built-in categorical palette, in slot order. */
 export declare const palette: string[];
+
+/** The chrome colour palettes behind the `theme` option. */
+export declare const themes: Record<ChartTheme, {
+  axis: { color: string; gridColor: string; textColor: string; crosshairColor: string };
+  legend: { color: string };
+  tooltip: { background: string; color: string; borderColor: string };
+}>;

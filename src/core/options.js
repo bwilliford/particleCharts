@@ -7,9 +7,51 @@
 
 import { deepMerge, isPlainObject } from './utils.js';
 
+/**
+ * Chrome palettes. Only the furniture is themed — axis lines, grid, labels,
+ * crosshair, legend text and the tooltip. Particle colours are never touched:
+ * the categorical palette is chosen to hold up on either ground.
+ */
+export const THEMES = {
+  dark: {
+    axis: {
+      color: 'rgba(255,255,255,0.2)',
+      gridColor: 'rgba(255,255,255,0.1)',
+      textColor: 'rgba(255,255,255,0.6)',
+      crosshairColor: 'rgba(255,255,255,0.22)'
+    },
+    legend: { color: 'rgba(255,255,255,0.72)' },
+    tooltip: {
+      background: 'rgba(12,14,19,0.94)',
+      color: '#e9edf3',
+      borderColor: 'rgba(255,255,255,0.12)'
+    }
+  },
+  light: {
+    axis: {
+      color: 'rgba(22,26,34,0.28)',
+      gridColor: 'rgba(22,26,34,0.12)',
+      textColor: 'rgba(22,26,34,0.62)',
+      crosshairColor: 'rgba(22,26,34,0.3)'
+    },
+    legend: { color: 'rgba(22,26,34,0.78)' },
+    tooltip: {
+      background: 'rgba(255,255,255,0.96)',
+      color: '#161a22',
+      borderColor: 'rgba(22,26,34,0.14)'
+    }
+  }
+};
+
 export const DEFAULTS = {
-  /** 'line' | 'area' | 'bar' | 'pie' | 'donut' */
+  /** 'line' | 'area' | 'bar' | 'bubble' | 'pie' | 'donut' | 'radar' */
   type: 'line',
+
+  /**
+   * 'dark' | 'light' — which chrome palette the axis, legend and tooltip
+   * default to. Any colour you set explicitly still wins over the theme.
+   */
+  theme: 'dark',
 
   // ---- canvas ----------------------------------------------------------
   background: 'transparent',
@@ -24,7 +66,7 @@ export const DEFAULTS = {
     /** Colour, array of colours, or fn(index, series) -> colour. Null = palette. */
     color: null,
     /** Base radius in CSS pixels. Fine dust by default. */
-    size: 0.5,
+    size: 0.8,
     /** 0..1 random size spread. 0 keeps every particle identical. */
     sizeJitter: 0,
     /** Multiplier on the auto-computed particle budget. */
@@ -32,7 +74,7 @@ export const DEFAULTS = {
     /** Hard ceiling; the budget never exceeds this regardless of density. */
     max: 50000,
     /** Additive glow strength, 0..1. */
-    bloom: 0.5,
+    bloom: 0.8,
     /** Blur radius of the bloom pass, in CSS pixels. */
     bloomRadius: 14,
     /**
@@ -42,7 +84,7 @@ export const DEFAULTS = {
      */
     opacity: 0.7,
     /** Idle drift amplitude in pixels — the "alive" wobble. */
-    jitter: 2,
+    jitter: 1,
     /** Idle drift speed. */
     jitterSpeed: 1,
     /** Spring stiffness pulling a particle to its target (0..1). */
@@ -63,9 +105,7 @@ export const DEFAULTS = {
   showAxis: true,
   showGrid: true,
   axis: {
-    color: 'rgba(255,255,255,0.16)',
-    gridColor: 'rgba(255,255,255,0.06)',
-    textColor: 'rgba(255,255,255,0.52)',
+    ...THEMES.dark.axis,
     fontFamily: 'ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     fontSize: 11,
     /** Approximate y tick count; the nice-number algorithm decides the real one. */
@@ -97,7 +137,7 @@ export const DEFAULTS = {
     interactive: true,
     markerSize: 8,
     fontSize: 12,
-    color: 'rgba(255,255,255,0.72)'
+    color: THEMES.dark.legend.color
   },
 
   // ---- tooltip ---------------------------------------------------------
@@ -105,9 +145,7 @@ export const DEFAULTS = {
   tooltip: {
     /** fn({label, entries, chart}) -> HTML string */
     format: null,
-    background: 'rgba(12,14,19,0.94)',
-    color: '#e9edf3',
-    borderColor: 'rgba(255,255,255,0.12)'
+    ...THEMES.dark.tooltip
   },
 
   /** Print values next to the marks (bars, points, slices). */
@@ -146,6 +184,49 @@ export const DEFAULTS = {
     radius: 4
   },
 
+  bubble: {
+    /**
+     * Bubble radii in pixels. The third data value is mapped between these two
+     * by *area*, not by radius — a value twice as large covers twice the ink.
+     * Radius-proportional sizing is the classic bubble-chart lie and reads as
+     * roughly the square of the real ratio.
+     */
+    minRadius: 5,
+    maxRadius: 30,
+    /** Feather the rim so bubbles dissolve outward rather than ending flat, 0..1. */
+    edgeFade: 0.35,
+    /** Pin the size domain instead of taking it from the data. */
+    minValue: null,
+    maxValue: null,
+    /**
+     * Ring each bubble behind the cloud. Off: the particles already carry the
+     * shape, and a stroke at low alpha over an additive field reads as a grey
+     * outline rather than as the bubble's own colour. The hovered bubble is
+     * still ringed regardless — there it is the highlight, not decoration.
+     */
+    outline: false
+  },
+
+  radar: {
+    /** Web rings between the centre and the outer edge. */
+    levels: 4,
+    /** 'polygon' follows the spokes; 'circle' draws true rings. */
+    shape: 'polygon',
+    /** Thickness of the particle band forming each series' outline. */
+    width: 2.6,
+    /** Fill the enclosed area with particles. */
+    fill: true,
+    /** Share of a series' particles spent on the fill vs the outline, 0..1. */
+    fillAmount: 0.55,
+    /** >0 thins the fill toward the centre, leaving a rim of light. */
+    fillFade: 0.55,
+    /** Extra particle clusters at each vertex. */
+    points: true,
+    pointRadius: 4,
+    /** Degrees, 0 = 3 o'clock. -90 puts the first spoke straight up. */
+    startAngle: -90
+  },
+
   pie: {
     /** 0..0.95 of the outer radius. `type: 'donut'` defaults this to 0.62. */
     innerRadius: 0,
@@ -181,10 +262,15 @@ const ALIASES = {
   stacked: ['bar', 'stacked'],
   horizontal: ['bar', 'horizontal'],
   barPadding: ['bar', 'padding'],
+  minRadius: ['bubble', 'minRadius'],
+  maxRadius: ['bubble', 'maxRadius'],
+  levels: ['radar', 'levels'],
+  webShape: ['radar', 'shape'],
   innerRadius: ['pie', 'innerRadius'],
   startAngle: ['pie', 'startAngle'],
   padAngle: ['pie', 'padAngle'],
   legendPosition: ['legend', 'position'],
+  legendAlign: ['legend', 'align'],
   min: ['axis', 'min'],
   max: ['axis', 'max'],
   beginAtZero: ['axis', 'beginAtZero'],
@@ -196,7 +282,8 @@ const ALIASES = {
   fontFamily: ['axis', 'fontFamily'],
   textColor: ['axis', 'textColor'],
   axisColor: ['axis', 'color'],
-  gridColor: ['axis', 'gridColor']
+  gridColor: ['axis', 'gridColor'],
+  crosshairColor: ['axis', 'crosshairColor']
 };
 
 function expandAliases(config) {
@@ -219,6 +306,9 @@ function expandAliases(config) {
   return out;
 }
 
+/** Types whose legend keys a series, and so reads better under the plot. */
+const BOTTOM_LEGEND = new Set(['line', 'area', 'bar', 'column', 'bubble', 'scatter', 'radar', 'spider']);
+
 function given(config, alias, group, prop) {
   if (!config) return false;
   if (config[alias] !== undefined) return true;
@@ -226,7 +316,21 @@ function given(config, alias, group, prop) {
 }
 
 export function resolveOptions(config, previous) {
-  const merged = deepMerge(previous || DEFAULTS, expandAliases(config));
+  const expanded = expandAliases(config);
+  const base = previous || DEFAULTS;
+
+  /**
+   * The theme is a layer between the defaults and the caller: it only lands
+   * when there is nothing to preserve (first resolve) or when this very call
+   * changes the theme. Otherwise a later `setOptions({ particleSize })` would
+   * quietly repaint chrome colours the caller had already overridden. Colours
+   * passed in the same call as the theme still win, since they merge on top.
+   */
+  const nextTheme = expanded.theme !== undefined ? expanded.theme : base.theme;
+  const palette = THEMES[nextTheme];
+  const repaint = palette && (!previous || nextTheme !== base.theme);
+
+  const merged = deepMerge(repaint ? deepMerge(base, palette) : base, expanded);
 
   // Type-driven defaults, applied only when the caller has not spoken.
   if (!previous) {
@@ -235,6 +339,32 @@ export function resolveOptions(config, previous) {
     }
     if (merged.type === 'area' && !given(config, 'fillArea', 'line', 'area')) {
       merged.line = { ...merged.line, area: true, areaAmount: 0.7 };
+    }
+    /**
+     * Where colour keys a *series*, the legend is a key to the plot and belongs
+     * under it, centred — read after the chart, not before it. Pie and donut
+     * are the exception: colour there keys a category, so the legend is closer
+     * to a label list and keeps the top-left default.
+     */
+    if (BOTTOM_LEGEND.has(merged.type)) {
+      const legend = { ...merged.legend };
+      if (!given(config, 'legendPosition', 'legend', 'position')) legend.position = 'bottom';
+      if (!given(config, 'legendAlign', 'legend', 'align')) legend.align = 'center';
+      merged.legend = legend;
+    }
+    /**
+     * A bubble field is read by position, not by height, so the two cartesian
+     * habits that serve bars and lines actively hurt it: a zero baseline
+     * strands the cloud in one corner, and vertical-only gridlines give a
+     * bubble nothing to line up against horizontally.
+     */
+    if (merged.type === 'bubble') {
+      if (!given(config, 'beginAtZero', 'axis', 'beginAtZero')) {
+        merged.axis = { ...merged.axis, beginAtZero: false };
+      }
+      if (!isPlainObject(config) || config.axis === undefined || config.axis.xGrid === undefined) {
+        merged.axis = { ...merged.axis, xGrid: true };
+      }
     }
   }
   return merged;

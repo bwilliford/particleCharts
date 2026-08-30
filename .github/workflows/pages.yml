@@ -34,6 +34,10 @@ jobs:
           mkdir -p _site
           cp index.html _site/
           cp -r site dist _site/
+          # assets/ carries the social-card image and the showcase shots, both
+          # of which are referenced by index.html — without this they 404.
+          cp -r assets _site/
+          cp sitemap.xml _site/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

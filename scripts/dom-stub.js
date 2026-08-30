@@ -219,6 +219,25 @@ export function installDomStub() {
   };
   global.matchMedia = () => ({ matches: false, addEventListener: NOOP, removeEventListener: NOOP });
 
+  /**
+   * Enough ResizeObserver for the chart to wire itself up. It never fires on
+   * its own — a test drives it through `__resizeObservers`, which is the only
+   * way to assert that repeated resizes coalesce into one layout.
+   */
+  const observers = [];
+  global.__resizeObservers = observers;
+  global.ResizeObserver = class {
+    constructor(callback) {
+      this.callback = callback;
+      observers.push(this);
+    }
+    observe() {}
+    disconnect() {
+      const i = observers.indexOf(this);
+      if (i >= 0) observers.splice(i, 1);
+    }
+  };
+
   /** Run every pending frame callback with the given timestamp. */
   global.__flushFrame = (time) => {
     const pending = queue.splice(0, queue.length);

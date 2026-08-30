@@ -1,5 +1,5 @@
 /*!
- * Particle Charts v0.2.0 — data visualisation made of particles.
+ * Particle Charts v1.0.0 — data visualisation made of particles.
  * https://bwilliford.github.io/particleCharts/
  * MIT Licence.
  */
@@ -326,10 +326,16 @@ function pointScale(count, range) {
   return scale;
 }
 
-/** Continuous x positions (numeric x axis) exposed through the same interface. */
-function valueCategoryScale(values, range) {
-  const min = Math.min.apply(null, values);
-  const max = Math.max.apply(null, values);
+/**
+ * Continuous x positions (numeric x axis) exposed through the same interface.
+ *
+ * `domain` overrides the data extent — a scatter wants its axis rounded out to
+ * nice tick bounds, so the outermost marks sit inside the plot instead of flush
+ * against its edges. Omitted, the domain is the extent, as it always was.
+ */
+function valueCategoryScale(values, range, domain) {
+  const min = domain ? domain[0] : Math.min.apply(null, values);
+  const max = domain ? domain[1] : Math.max.apply(null, values);
   const s = linearScale([min, max], range);
   return {
     step: values.length > 1 ? (range[1] - range[0]) / (values.length - 1) : 0,
@@ -408,8 +414,13 @@ function thinTicks(values, available, perLabel) {
  *   {
  *     labels:  string[],                                  // category axis
  *     xValues: number[] | null,                           // set when x is numeric
- *     series:  [{ name, color, values: (number|null)[] }]
+ *     series:  [{ name, color, values, sizes?: (number|null)[], xs?: (number|null)[] }]
  *   }
+ *
+ * `sizes` (the bubble chart's third dimension) and `xs` (a series' own numeric
+ * x positions, which the shared `xValues` cannot represent for more than one
+ * series) are attached only when the input carried them, so every other shape
+ * normalises exactly as it always did.
  *
  * Accepted inputs (all plain JSON):
  *   [4, 8, 15]
@@ -418,11 +429,14 @@ function thinTicks(values, available, perLabel) {
  *   { labels: [...], series: [{ name, data, color }, ...] }
  *   [{ name: 'A', data: [...] }, { name: 'B', data: [...] }]
  *   { series: [{ name, data: [{ x: 1, y: 4 }, ...] }] }
+ *   { series: [{ name, data: [{ x: 1, y: 4, r: 9 }, ...] }] }   // bubble sizes
  */
 
 
 const LABEL_KEYS = ['label', 'name', 'x', 'key', 'category', 'date'];
 const VALUE_KEYS = ['value', 'y', 'count', 'total', 'amount'];
+/** A third dimension, read only by the bubble chart. Absent for every other type. */
+const SIZE_KEYS = ['r', 'size', 'z', 'radius', 'weight'];
 
 function pick(obj, keys) {
   for (const k of keys) if (obj[k] !== undefined) return obj[k];
@@ -439,8 +453,10 @@ function toValue(v) {
 function readPoints(list) {
   const labels = [];
   const values = [];
+  const sizes = [];
   const xs = [];
   let hasLabels = false;
+  let hasSizes = false;
   let numericX = true;
 
   list.forEach((item, i) => {
@@ -458,6 +474,9 @@ function readPoints(list) {
         xs.push(i);
       }
       values.push(toValue(rawValue !== undefined ? rawValue : null));
+      const rawSize = pick(item, SIZE_KEYS);
+      if (rawSize !== undefined) hasSizes = true;
+      sizes.push(toValue(rawSize !== undefined ? rawSize : null));
     } else if (Array.isArray(item)) {
       hasLabels = true;
       labels.push(String(item[0]));
@@ -465,14 +484,25 @@ function readPoints(list) {
       if (nx === null) numericX = false;
       else xs.push(nx);
       values.push(toValue(item[1]));
+      if (item.length > 2) hasSizes = true;
+      sizes.push(toValue(item.length > 2 ? item[2] : null));
     } else {
       labels.push(String(i));
       xs.push(i);
       values.push(toValue(item));
+      sizes.push(null);
     }
   });
 
-  return { labels, values, xs, hasLabels, numericX: numericX && xs.length === list.length };
+  return {
+    labels,
+    values,
+    sizes,
+    xs,
+    hasLabels,
+    hasSizes,
+    numericX: numericX && xs.length === list.length
+  };
 }
 
 function seriesFrom(entry, index) {
@@ -498,7 +528,12 @@ function normalizeData(input) {
     return {
       labels: read.labels,
       xValues: read.numericX && read.hasLabels ? read.xs : null,
-      series: [{ name: 'Series 1', color: undefined, values: read.values }]
+      series: [
+        withExtras({ name: 'Series 1', color: undefined, values: read.values }, {
+          sizes: read.hasSizes ? read.sizes : null,
+          xs: read.numericX && read.hasLabels ? read.xs : null
+        })
+      ]
     };
   }
 
@@ -526,11 +561,11 @@ function normalizeData(input) {
     return {
       labels,
       xValues,
-      series: parsed.map((s) => ({
-        name: s.name,
-        color: s.color,
-        values: padTo(s.read.values, width)
-      }))
+      series: parsed.map((s) =>
+        withExtras({ name: s.name, color: s.color, values: padTo(s.read.values, width) }, {
+          sizes: s.read.hasSizes ? padTo(s.read.sizes, width) : null,
+          xs: s.read.numericX && s.read.hasLabels ? padTo(s.read.xs, width) : null
+        }))
     };
   }
 
@@ -544,7 +579,12 @@ function normalizeData(input) {
     return {
       labels: labels.slice(0, values.length),
       xValues: Array.isArray(input.xValues) ? input.xValues.map(toValue) : null,
-      series: [{ name: input.name ? String(input.name) : 'Series 1', color: input.color, values }]
+      series: [
+        withExtras({ name: input.name ? String(input.name) : 'Series 1', color: input.color, values }, {
+          sizes: Array.isArray(input.sizes) ? padTo(input.sizes.map(toValue), values.length) : null,
+          xs: Array.isArray(input.xValues) ? padTo(input.xValues.map(toValue), values.length) : null
+        })
+      ]
     };
   }
 
@@ -559,6 +599,23 @@ function normalizeData(input) {
   }
 
   return empty;
+}
+
+/**
+ * `sizes` is the bubble chart's third dimension, and `xs` a series' own numeric
+ * x positions. Both are attached only when the input actually carried them, so
+ * every other input shape — and every other chart type — sees exactly the
+ * object it saw before.
+ *
+ * The top-level `xValues` can only describe one x per index, which is right for
+ * a line chart (series share a category axis) and wrong for a scatter, where
+ * two series genuinely sit at different x. Keeping each series' own array
+ * alongside lets the bubble chart plot them where they really are.
+ */
+function withExtras(series, extras) {
+  if (extras.sizes) series.sizes = extras.sizes;
+  if (extras.xs) series.xs = extras.xs;
+  return series;
 }
 
 function padTo(values, width) {
@@ -616,9 +673,51 @@ function valueExtent(series, options) {
  */
 
 
+/**
+ * Chrome palettes. Only the furniture is themed — axis lines, grid, labels,
+ * crosshair, legend text and the tooltip. Particle colours are never touched:
+ * the categorical palette is chosen to hold up on either ground.
+ */
+const THEMES = {
+  dark: {
+    axis: {
+      color: 'rgba(255,255,255,0.2)',
+      gridColor: 'rgba(255,255,255,0.1)',
+      textColor: 'rgba(255,255,255,0.6)',
+      crosshairColor: 'rgba(255,255,255,0.22)'
+    },
+    legend: { color: 'rgba(255,255,255,0.72)' },
+    tooltip: {
+      background: 'rgba(12,14,19,0.94)',
+      color: '#e9edf3',
+      borderColor: 'rgba(255,255,255,0.12)'
+    }
+  },
+  light: {
+    axis: {
+      color: 'rgba(22,26,34,0.28)',
+      gridColor: 'rgba(22,26,34,0.12)',
+      textColor: 'rgba(22,26,34,0.62)',
+      crosshairColor: 'rgba(22,26,34,0.3)'
+    },
+    legend: { color: 'rgba(22,26,34,0.78)' },
+    tooltip: {
+      background: 'rgba(255,255,255,0.96)',
+      color: '#161a22',
+      borderColor: 'rgba(22,26,34,0.14)'
+    }
+  }
+};
+
 const DEFAULTS = {
-  /** 'line' | 'area' | 'bar' | 'pie' | 'donut' */
+  /** 'line' | 'area' | 'bar' | 'bubble' | 'pie' | 'donut' | 'radar' */
   type: 'line',
+
+  /**
+   * 'dark' | 'light' — which chrome palette the axis, legend and tooltip
+   * default to. Any colour you set explicitly still wins over the theme.
+   */
+  theme: 'dark',
 
   // ---- canvas ----------------------------------------------------------
   background: 'transparent',
@@ -633,7 +732,7 @@ const DEFAULTS = {
     /** Colour, array of colours, or fn(index, series) -> colour. Null = palette. */
     color: null,
     /** Base radius in CSS pixels. Fine dust by default. */
-    size: 0.5,
+    size: 0.8,
     /** 0..1 random size spread. 0 keeps every particle identical. */
     sizeJitter: 0,
     /** Multiplier on the auto-computed particle budget. */
@@ -641,7 +740,7 @@ const DEFAULTS = {
     /** Hard ceiling; the budget never exceeds this regardless of density. */
     max: 50000,
     /** Additive glow strength, 0..1. */
-    bloom: 0.5,
+    bloom: 0.8,
     /** Blur radius of the bloom pass, in CSS pixels. */
     bloomRadius: 14,
     /**
@@ -651,7 +750,7 @@ const DEFAULTS = {
      */
     opacity: 0.7,
     /** Idle drift amplitude in pixels — the "alive" wobble. */
-    jitter: 2,
+    jitter: 1,
     /** Idle drift speed. */
     jitterSpeed: 1,
     /** Spring stiffness pulling a particle to its target (0..1). */
@@ -672,9 +771,7 @@ const DEFAULTS = {
   showAxis: true,
   showGrid: true,
   axis: {
-    color: 'rgba(255,255,255,0.16)',
-    gridColor: 'rgba(255,255,255,0.06)',
-    textColor: 'rgba(255,255,255,0.52)',
+    ...THEMES.dark.axis,
     fontFamily: 'ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     fontSize: 11,
     /** Approximate y tick count; the nice-number algorithm decides the real one. */
@@ -706,7 +803,7 @@ const DEFAULTS = {
     interactive: true,
     markerSize: 8,
     fontSize: 12,
-    color: 'rgba(255,255,255,0.72)'
+    color: THEMES.dark.legend.color
   },
 
   // ---- tooltip ---------------------------------------------------------
@@ -714,9 +811,7 @@ const DEFAULTS = {
   tooltip: {
     /** fn({label, entries, chart}) -> HTML string */
     format: null,
-    background: 'rgba(12,14,19,0.94)',
-    color: '#e9edf3',
-    borderColor: 'rgba(255,255,255,0.12)'
+    ...THEMES.dark.tooltip
   },
 
   /** Print values next to the marks (bars, points, slices). */
@@ -755,6 +850,49 @@ const DEFAULTS = {
     radius: 4
   },
 
+  bubble: {
+    /**
+     * Bubble radii in pixels. The third data value is mapped between these two
+     * by *area*, not by radius — a value twice as large covers twice the ink.
+     * Radius-proportional sizing is the classic bubble-chart lie and reads as
+     * roughly the square of the real ratio.
+     */
+    minRadius: 5,
+    maxRadius: 30,
+    /** Feather the rim so bubbles dissolve outward rather than ending flat, 0..1. */
+    edgeFade: 0.35,
+    /** Pin the size domain instead of taking it from the data. */
+    minValue: null,
+    maxValue: null,
+    /**
+     * Ring each bubble behind the cloud. Off: the particles already carry the
+     * shape, and a stroke at low alpha over an additive field reads as a grey
+     * outline rather than as the bubble's own colour. The hovered bubble is
+     * still ringed regardless — there it is the highlight, not decoration.
+     */
+    outline: false
+  },
+
+  radar: {
+    /** Web rings between the centre and the outer edge. */
+    levels: 4,
+    /** 'polygon' follows the spokes; 'circle' draws true rings. */
+    shape: 'polygon',
+    /** Thickness of the particle band forming each series' outline. */
+    width: 2.6,
+    /** Fill the enclosed area with particles. */
+    fill: true,
+    /** Share of a series' particles spent on the fill vs the outline, 0..1. */
+    fillAmount: 0.55,
+    /** >0 thins the fill toward the centre, leaving a rim of light. */
+    fillFade: 0.55,
+    /** Extra particle clusters at each vertex. */
+    points: true,
+    pointRadius: 4,
+    /** Degrees, 0 = 3 o'clock. -90 puts the first spoke straight up. */
+    startAngle: -90
+  },
+
   pie: {
     /** 0..0.95 of the outer radius. `type: 'donut'` defaults this to 0.62. */
     innerRadius: 0,
@@ -790,10 +928,15 @@ const ALIASES = {
   stacked: ['bar', 'stacked'],
   horizontal: ['bar', 'horizontal'],
   barPadding: ['bar', 'padding'],
+  minRadius: ['bubble', 'minRadius'],
+  maxRadius: ['bubble', 'maxRadius'],
+  levels: ['radar', 'levels'],
+  webShape: ['radar', 'shape'],
   innerRadius: ['pie', 'innerRadius'],
   startAngle: ['pie', 'startAngle'],
   padAngle: ['pie', 'padAngle'],
   legendPosition: ['legend', 'position'],
+  legendAlign: ['legend', 'align'],
   min: ['axis', 'min'],
   max: ['axis', 'max'],
   beginAtZero: ['axis', 'beginAtZero'],
@@ -805,7 +948,8 @@ const ALIASES = {
   fontFamily: ['axis', 'fontFamily'],
   textColor: ['axis', 'textColor'],
   axisColor: ['axis', 'color'],
-  gridColor: ['axis', 'gridColor']
+  gridColor: ['axis', 'gridColor'],
+  crosshairColor: ['axis', 'crosshairColor']
 };
 
 function expandAliases(config) {
@@ -828,6 +972,9 @@ function expandAliases(config) {
   return out;
 }
 
+/** Types whose legend keys a series, and so reads better under the plot. */
+const BOTTOM_LEGEND = new Set(['line', 'area', 'bar', 'column', 'bubble', 'scatter', 'radar', 'spider']);
+
 function given(config, alias, group, prop) {
   if (!config) return false;
   if (config[alias] !== undefined) return true;
@@ -835,7 +982,21 @@ function given(config, alias, group, prop) {
 }
 
 function resolveOptions(config, previous) {
-  const merged = deepMerge(previous || DEFAULTS, expandAliases(config));
+  const expanded = expandAliases(config);
+  const base = previous || DEFAULTS;
+
+  /**
+   * The theme is a layer between the defaults and the caller: it only lands
+   * when there is nothing to preserve (first resolve) or when this very call
+   * changes the theme. Otherwise a later `setOptions({ particleSize })` would
+   * quietly repaint chrome colours the caller had already overridden. Colours
+   * passed in the same call as the theme still win, since they merge on top.
+   */
+  const nextTheme = expanded.theme !== undefined ? expanded.theme : base.theme;
+  const palette = THEMES[nextTheme];
+  const repaint = palette && (!previous || nextTheme !== base.theme);
+
+  const merged = deepMerge(repaint ? deepMerge(base, palette) : base, expanded);
 
   // Type-driven defaults, applied only when the caller has not spoken.
   if (!previous) {
@@ -844,6 +1005,32 @@ function resolveOptions(config, previous) {
     }
     if (merged.type === 'area' && !given(config, 'fillArea', 'line', 'area')) {
       merged.line = { ...merged.line, area: true, areaAmount: 0.7 };
+    }
+    /**
+     * Where colour keys a *series*, the legend is a key to the plot and belongs
+     * under it, centred — read after the chart, not before it. Pie and donut
+     * are the exception: colour there keys a category, so the legend is closer
+     * to a label list and keeps the top-left default.
+     */
+    if (BOTTOM_LEGEND.has(merged.type)) {
+      const legend = { ...merged.legend };
+      if (!given(config, 'legendPosition', 'legend', 'position')) legend.position = 'bottom';
+      if (!given(config, 'legendAlign', 'legend', 'align')) legend.align = 'center';
+      merged.legend = legend;
+    }
+    /**
+     * A bubble field is read by position, not by height, so the two cartesian
+     * habits that serve bars and lines actively hurt it: a zero baseline
+     * strands the cloud in one corner, and vertical-only gridlines give a
+     * bubble nothing to line up against horizontally.
+     */
+    if (merged.type === 'bubble') {
+      if (!given(config, 'beginAtZero', 'axis', 'beginAtZero')) {
+        merged.axis = { ...merged.axis, beginAtZero: false };
+      }
+      if (!isPlainObject(config) || config.axis === undefined || config.axis.xGrid === undefined) {
+        merged.axis = { ...merged.axis, xGrid: true };
+      }
     }
   }
   return merged;
@@ -1419,6 +1606,15 @@ function drawAxis(ctx, spec, options) {
     ctx.stroke();
   }
 
+  // Everything past this point is axis furniture, not grid. `showGrid` and
+  // `showAxis` are independent switches: with the axis off, the grid alone
+  // still has to draw — and the baseline, ticks and titles must not, or the
+  // padding measured for a chart without labels gets labels drawn into it.
+  if (!options.showAxis) {
+    ctx.restore();
+    return;
+  }
+
   // ---- baseline ----------------------------------------------------------
   ctx.strokeStyle = axis.color;
   ctx.beginPath();
@@ -1482,7 +1678,7 @@ function drawAxis(ctx, spec, options) {
 /** Vertical hover guide behind the tooltip. */
 function drawHoverGuide(ctx, spec, pos, options) {
   ctx.save();
-  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctx.strokeStyle = options.axis.crosshairColor;
   ctx.lineWidth = 1;
   ctx.setLineDash([3, 4]);
   ctx.beginPath();
@@ -1918,6 +2114,61 @@ function sampleSector(cx, cy, r0, r1, a0, a1, count, rng, edgeFade, emit) {
   }
 }
 
+/**
+ * Fill a polygon by fanning triangles out from a hub — the radar chart's web
+ * centre. Triangles are picked in proportion to their area so density stays
+ * even however lopsided the shape is, and the point inside each is drawn with
+ * the standard "fold the unit square" trick rather than by rejection, which
+ * keeps the emitted count exactly `count`.
+ *
+ * `fade` > 0 thins particles toward the hub, so the fill reads as a rim of
+ * light around the edge rather than a solid disc that buries the outline.
+ */
+function samplePolygonFan(hub, points, count, rng, fade, emit) {
+  if (points.length < 3 || count <= 0) return;
+
+  const areas = [];
+  let total = 0;
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i];
+    const b = points[(i + 1) % points.length];
+    const area = Math.abs(
+      (a.x - hub.x) * (b.y - hub.y) - (b.x - hub.x) * (a.y - hub.y)
+    ) / 2;
+    total += area;
+    areas.push(total);
+  }
+  if (total <= 0) return;
+
+  const bias = 1 + clamp(fade, 0, 1) * 1.4;
+  let t = 0;
+  for (let k = 0; k < count; k++) {
+    const target = ((k + rng()) / count) * total;
+    while (t < areas.length - 1 && areas[t] < target) t++;
+    const a = points[t];
+    const b = points[(t + 1) % points.length];
+
+    // Uniform point in the triangle (hub, a, b): fold the square back in.
+    let u = rng();
+    let v = rng();
+    if (u + v > 1) {
+      u = 1 - u;
+      v = 1 - v;
+    }
+    // Push the sample outward from the hub, leaving the middle sparse.
+    const pull = Math.pow(rng(), 1 / bias);
+    const w = (u + v) === 0 ? 0 : pull / (u + v);
+    const su = u * w;
+    const sv = v * w;
+
+    emit(
+      hub.x + (a.x - hub.x) * su + (b.x - hub.x) * sv,
+      hub.y + (a.y - hub.y) * su + (b.y - hub.y) * sv,
+      clamp(su + sv, 0, 1)
+    );
+  }
+}
+
 /** A soft blob of particles, used for data-point markers. */
 function sampleDisc(cx, cy, radius, count, rng, emit) {
   for (let i = 0; i < count; i++) {
@@ -1944,6 +2195,14 @@ const REFERENCE_AREA = 640 * 360;
 const REFERENCE_SIZE = 1.6;
 /** Particles for a reference-area plot at density 1 and reference size. */
 const BASE_BUDGET = 700;
+/**
+ * Frame budget for a settled chart: idle drift is repainted at ~30fps. Set a
+ * shade under 1000/30 on purpose — at exactly 33.33ms the check lands on the
+ * 60Hz frame boundary, where float error decides it, and the drift stutters
+ * between every-second and every-third frame. Under the boundary it is always
+ * every second frame at 60Hz, every fourth at 120Hz.
+ */
+const DRIFT_FRAME_MS = 1000 / 32;
 
 class Chart {
   constructor(target, config) {
@@ -2006,9 +2265,18 @@ class Chart {
 
   observeResize() {
     if (!this.options.responsive || typeof ResizeObserver === 'undefined') return;
+    /**
+     * A dragged window fires this every frame, and every layout re-measures the
+     * axis and rebuilds every particle target — the most expensive thing the
+     * chart does. Coalesce to one layout per frame, and drop the intermediate
+     * sizes rather than laying out for sizes nobody ever sees.
+     */
     this.resizeObserver = new ResizeObserver(() => {
-      if (this.destroyed) return;
-      this.layout({ resize: true });
+      if (this.destroyed || this.resizeFrame) return;
+      this.resizeFrame = requestAnimationFrame(() => {
+        this.resizeFrame = 0;
+        if (!this.destroyed) this.layout({ resize: true });
+      });
     });
     this.resizeObserver.observe(this.plotHost);
   }
@@ -2156,14 +2424,26 @@ class Chart {
     const tick = (now) => {
       this.frame = 0;
       if (this.destroyed) return;
-      const dt = this.lastTime ? Math.min(now - this.lastTime, 64) : 16.7;
-      this.lastTime = now;
-      this.field.update(dt, this.options.particle);
-      this.draw(now);
+      const cfg = this.options.particle;
+
+      /**
+       * Particles in flight need every frame. Once they have arrived the only
+       * motion left is the idle drift — a slow sine wobble that samples the
+       * same at 30fps as at 60 — so paint it half as often and hand the rest
+       * of the frame budget back to the page. On a 120Hz display this cuts the
+       * work by four rather than two, which is why it is a time budget and not
+       * a frame counter.
+       */
+      if (!this.field.settled || now - this.lastTime >= DRIFT_FRAME_MS) {
+        const dt = this.lastTime ? Math.min(now - this.lastTime, 64) : 16.7;
+        this.lastTime = now;
+        this.field.update(dt, cfg);
+        this.draw(now);
+      }
+
       // A chart with no idle drift has nothing left to animate once its
       // particles arrive, so stop burning frames until something changes.
       // `start()` is called again by layout, update and hover.
-      const cfg = this.options.particle;
       const idle = this.field.settled && (!this.motionOk || !cfg.jitter);
       if (this.visible && !idle) this.frame = requestAnimationFrame(tick);
     };
@@ -2181,14 +2461,25 @@ class Chart {
     r.beginFrame(opts.background);
     const ctx = r.ctx;
 
-    const particleCfg = this.motionOk
-      ? opts.particle
-      : (this.staticCfg = { ...opts.particle, jitter: 0 });
+    const particleCfg = this.motionOk ? opts.particle : this.stillConfig();
 
     this.drawBackdrop(ctx);
     r.paintScene(this.field.particles, particleCfg, now);
     r.composite(particleCfg);
     this.drawForeground(ctx);
+  }
+
+  /**
+   * The particle config with drift removed, for readers who asked for reduced
+   * motion. Rebuilt only when the options object identity changes — this used
+   * to allocate a fresh object on every single frame.
+   */
+  stillConfig() {
+    if (this.stillFrom !== this.options.particle) {
+      this.stillFrom = this.options.particle;
+      this.stillCfg = { ...this.options.particle, jitter: 0 };
+    }
+    return this.stillCfg;
   }
 
   // ---------------------------------------------------------- public API ---
@@ -2231,6 +2522,7 @@ class Chart {
     if (this.destroyed) return;
     this.destroyed = true;
     this.stop();
+    if (this.resizeFrame) cancelAnimationFrame(this.resizeFrame);
     if (this.resizeObserver) this.resizeObserver.disconnect();
     if (this.intersectionObserver) this.intersectionObserver.disconnect();
     if (this.onVisibility) document.removeEventListener('visibilitychange', this.onVisibility);
@@ -2357,6 +2649,10 @@ class CartesianChart extends Chart {
 
     const catRange = this.horizontal ? [plot.y, plot.y + plot.h] : [plot.x, plot.x + plot.w];
     this.catScale = this.createCategoryScale(this.data.labels.length, catRange);
+
+    // The axis spec is a pure function of the geometry just computed, so it is
+    // rebuilt here and nowhere else. See `drawBackdrop`.
+    this.spec = null;
   }
 
   createCategoryScale(count, range) {
@@ -2397,9 +2693,16 @@ class CartesianChart extends Chart {
     };
   }
 
+  /**
+   * The spec is cached across frames. Building it formats every tick label and
+   * measures every category string against the canvas font — `measureText` is
+   * one of the slower Canvas2D calls, and none of its inputs change between
+   * layouts. This used to run eight measurements a frame, sixty times a second,
+   * for a result that was identical every time.
+   */
   drawBackdrop(ctx) {
     if (!this.options.showAxis && !this.options.showGrid) return;
-    this.spec = this.axisSpec();
+    if (!this.spec) this.spec = this.axisSpec();
     drawAxis(ctx, this.spec, this.options);
   }
 
@@ -2870,6 +3173,327 @@ function roundRectPath(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+// ---- src/charts/bubble.js ----------------------------------------------
+/**
+ * Bubble chart — a scatter plot with a third dimension in the mark size.
+ *
+ * Position comes from the same two scales the line chart uses, so a bubble
+ * field shares its axis, its ticks and its padding. The size dimension is read
+ * from `sizes` on the series, which `normalizeData` attaches only when the
+ * input actually carried one (`{x, y, r}` points, `[x, y, r]` tuples, or a
+ * parallel `sizes` array). Without it every bubble takes the mid radius, and
+ * the chart degrades to a plain scatter rather than failing.
+ */
+
+
+/** Minimum particles a bubble gets before it stops reading as a disc. */
+const MIN_PER_BUBBLE = 10;
+
+class BubbleChart extends CartesianChart {
+  /**
+   * The x axis of a scatter is continuous, not categorical. Where the line
+   * chart is happy to put one tick under each reading, a bubble field wants
+   * round intervals of its own — 10, 20, 30 — with the marks falling wherever
+   * their values put them, which is the whole point of plotting them in two
+   * dimensions. Rounding the domain out to those bounds also stops the extreme
+   * bubbles from sitting half outside the plot.
+   *
+   * Non-numeric x keeps the categorical treatment; there is nothing to round.
+   */
+  /**
+   * Each series' own x positions when it has them, falling back to the shared
+   * `xValues`. Two scatter series genuinely sit at different x, and the shared
+   * array can only hold one value per index.
+   */
+  xsFor(series) {
+    if (series && series.xs) return series.xs;
+    return this.data.xValues;
+  }
+
+  xAxis() {
+    const series = this.visibleSeries();
+    if (this.data.labels.length < 2) return null;
+    const finite = [];
+    for (const s of series) {
+      const xs = this.xsFor(s);
+      if (!xs) continue;
+      for (const v of xs) if (isNum(v)) finite.push(v);
+    }
+    if (finite.length < 2) return null;
+    const nice = niceTicks(
+      Math.min.apply(null, finite),
+      Math.max.apply(null, finite),
+      this.options.axis.ticks
+    );
+    return { ticks: nice.ticks, domain: [nice.min, nice.max] };
+  }
+
+  createCategoryScale(count, range) {
+    const xs = this.data.xValues;
+    if (this.xa && xs && xs.length === count && count > 1) {
+      return valueCategoryScale(xs, range, this.xa.domain);
+    }
+    if (xs && xs.length === count && count > 1) return valueCategoryScale(xs, range);
+    return pointScale(count, range);
+  }
+
+  /** Ticks at the round values, not at the data. */
+  categoryTicks() {
+    if (!this.xa) return super.categoryTicks();
+    const axis = this.options.axis;
+    const scale = linearScale(this.xa.domain, [this.plot.x, this.plot.x + this.plot.w]);
+    const labels = this.xa.ticks.map((v) => formatValue(v, this.options));
+
+    const ctx = this.renderer.ctx;
+    ctx.save();
+    ctx.font = axisFont(axis);
+    let widest = 0;
+    for (const l of labels) widest = Math.max(widest, ctx.measureText(l).width);
+    ctx.restore();
+
+    const kept = thinTicks(this.xa.ticks, this.plot.w, widest + 20);
+    return kept.map((v) => ({ label: formatValue(v, this.options), pos: scale(v) }));
+  }
+
+  /** Padding is measured against the tick labels actually drawn. */
+  labelSpec() {
+    const spec = super.labelSpec();
+    const xa = this.xAxis();
+    if (xa) spec.categoryLabels = xa.ticks.map((v) => formatValue(v, this.options));
+    return spec;
+  }
+
+  /**
+   * The size domain, across every visible series. Held separate from the value
+   * axis because it is a third dimension, not a second one.
+   */
+  sizeExtent() {
+    const cfg = this.options.bubble;
+    let min = Infinity;
+    let max = -Infinity;
+    for (const s of this.visibleSeries()) {
+      if (!s.sizes) continue;
+      for (const v of s.sizes) {
+        if (!isNum(v)) continue;
+        if (v < min) min = v;
+        if (v > max) max = v;
+      }
+    }
+    if (min === Infinity) return null; // no size data at all
+    if (isNum(cfg.minValue)) min = cfg.minValue;
+    if (isNum(cfg.maxValue)) max = cfg.maxValue;
+    // A size scale is a ratio scale: it has to start at zero or the smallest
+    // bubble silently claims a value it does not have.
+    return [Math.min(0, min), max];
+  }
+
+  /**
+   * Map a datum to a radius by area. `r = sqrt(lerp(minR², maxR², t))` is what
+   * makes a doubled value cover doubled ink; interpolating the radius directly
+   * would exaggerate it to roughly the square.
+   */
+  radiusFor(value, extent) {
+    const cfg = this.options.bubble;
+    const lo = Math.max(0.5, cfg.minRadius);
+    const hi = Math.max(lo, cfg.maxRadius);
+    if (!extent || !isNum(value)) return (lo + hi) / 2;
+    const [d0, d1] = extent;
+    const t = d1 === d0 ? 1 : clamp((value - d0) / (d1 - d0), 0, 1);
+    return Math.sqrt(lo * lo + t * (hi * hi - lo * lo));
+  }
+
+  /** Every bubble currently on screen, in pixel space. */
+  bubbles() {
+    const extent = (this.sizeDomain = this.sizeExtent());
+    const out = [];
+    this.visibleSeries().forEach((s, si) => {
+      const xs = this.xScale ? this.xsFor(s) : null;
+      s.values.forEach((v, i) => {
+        if (!isNum(v)) return;
+        const size = s.sizes ? s.sizes[i] : null;
+        const x = xs && isNum(xs[i]) ? this.xScale(xs[i]) : this.catScale.at(i);
+        out.push({
+          x,
+          y: this.vScale(v),
+          r: this.radiusFor(size, extent),
+          value: v,
+          size,
+          color: s.color,
+          name: s.name,
+          series: si,
+          index: i
+        });
+      });
+    });
+    return out;
+  }
+
+  computeGeometry() {
+    // Resolved before the base builds the scales — `createCategoryScale` needs it.
+    this.xa = this.xAxis();
+    super.computeGeometry();
+    this.xScale = this.xa
+      ? linearScale(this.xa.domain, [this.plot.x, this.plot.x + this.plot.w])
+      : null;
+    this.marks = this.bubbles();
+  }
+
+  /**
+   * Bubbles cover far less of the plot than a bar or an area fill does, so the
+   * plot-area budget would pack each one solid. Budget from the ink actually
+   * being drawn instead.
+   */
+  particleBudget() {
+    const marks = this.marks || [];
+    const ink = marks.reduce((a, b) => a + Math.PI * b.r * b.r, 0);
+    if (!ink) return super.particleBudget();
+    return Math.min(this.options.particle.max, Math.round(this.budgetForArea(ink) * 1.6));
+  }
+
+  buildTargets(budget) {
+    const marks = this.marks || (this.marks = this.bubbles());
+    const targets = [];
+    if (!marks.length) return targets;
+
+    const cfg = this.options.bubble;
+    const p = this.options.particle;
+    const rng = createRng(0xb0bb1e);
+    const j = p.sizeJitter;
+    const fade = clamp(cfg.edgeFade, 0, 1);
+    const counts = allocate(marks.map((b) => b.r * b.r), budget, MIN_PER_BUBBLE);
+
+    marks.forEach((b, bi) => {
+      const n = counts[bi];
+      if (!n) return;
+      const lifted = this.hover && this.hover.index === b.index;
+
+      sampleDisc(b.x, b.y, b.r, n, rng, (x, y, d) => {
+        targets.push({
+          x,
+          y,
+          color: b.color,
+          size: p.size * (1 - d * 0.15) * (1 - j * 0.5 + rng() * j),
+          // Thin the rim so bubbles read as soft bodies, and lift the hovered
+          // one out of the field with alpha rather than by moving it — moving
+          // a bubble would misreport its position, which is the whole encoding.
+          alpha: clamp((1 - Math.max(0, d - (1 - fade)) * 1.5) * (lifted ? 1 : 0.88), 0.08, 1),
+          group: b.series,
+          index: b.index
+        });
+      });
+    });
+
+    if (targets.length > p.max) targets.length = p.max;
+    return targets;
+  }
+
+  /**
+   * The base draws its crosshair through a category, which a scatter does not
+   * have — with per-series x, one index is two different positions. Track the
+   * hovered bubble instead.
+   */
+  drawForeground(ctx) {
+    const hovered = this.hover ? (this.marks || []).find((b) => b.index === this.hover.index) : null;
+    if (hovered) {
+      ctx.save();
+      ctx.strokeStyle = this.options.axis.crosshairColor;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath();
+      ctx.moveTo(Math.round(hovered.x) + 0.5, this.plot.y);
+      ctx.lineTo(Math.round(hovered.x) + 0.5, this.plot.y + this.plot.h);
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (this.options.showValues) this.drawValueLabels(ctx);
+    if (!this.options.bubble.outline && !this.hover) return;
+
+    ctx.save();
+    for (const b of this.marks || []) {
+      const hovered = this.hover && this.hover.index === b.index;
+      if (!hovered && !this.options.bubble.outline) continue;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r + (hovered ? 3 : 0), 0, TAU);
+      ctx.strokeStyle = b.color;
+      ctx.globalAlpha = hovered ? 0.85 : 0.28;
+      ctx.lineWidth = hovered ? 1.5 : 1;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Nearest bubble wins, not nearest category: a bubble field is read in two
+   * dimensions, so a column-shaped hit test would pick the wrong mark whenever
+   * two series overlap in x. Falls back to the category hit test outside any
+   * bubble, which keeps the crosshair and the axis in agreement.
+   */
+  handleHover(x, y) {
+    const marks = this.marks || [];
+    let best = null;
+    let bestDist = Infinity;
+    for (const b of marks) {
+      const d = Math.hypot(x - b.x, y - b.y);
+      if (d <= b.r + 4 && d < bestDist) {
+        bestDist = d;
+        best = b;
+      }
+    }
+
+    if (!best) {
+      if (this.hover) {
+        this.hover = null;
+        this.retarget();
+      }
+      this.tooltip.hide();
+      return;
+    }
+
+    if (!this.hover || this.hover.index !== best.index) {
+      this.hover = { index: best.index };
+      this.retarget(); // the hovered bubble brightens
+    }
+
+    const entries = [];
+    for (const b of marks) {
+      if (b.index !== best.index) continue;
+      entries.push({
+        name: b.name,
+        value: formatValue(b.value, this.options) + (isNum(b.size) ? ' · ' + formatValue(b.size, this.options) : ''),
+        color: b.color
+      });
+    }
+
+    this.tooltip.show(
+      { title: this.data.labels[best.index], entries, x: best.x, y: best.y - best.r },
+      { width: this.renderer.width, height: this.renderer.height },
+      this.options
+    );
+  }
+
+  hoverAnchor(index) {
+    let top = null;
+    for (const b of this.marks || []) {
+      if (b.index !== index) continue;
+      if (!top || b.y - b.r < top.y) top = { x: b.x, y: b.y - b.r };
+    }
+    return top || super.hoverAnchor(index);
+  }
+
+  drawValueLabels(ctx) {
+    const axis = this.options.axis;
+    ctx.save();
+    ctx.font = axisFont(axis, '600');
+    ctx.fillStyle = axis.textColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    for (const b of this.marks || []) {
+      ctx.fillText(formatValue(isNum(b.size) ? b.size : b.value, this.options), b.x, b.y - b.r - 6);
+    }
+    ctx.restore();
+  }
+}
+
 // ---- src/charts/pie.js -------------------------------------------------
 /**
  * Pie / donut chart.
@@ -3217,21 +3841,410 @@ function escHtml(v) {
   return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// ---- src/charts/radar.js -----------------------------------------------
+/**
+ * Radar / spider chart.
+ *
+ * A radial cousin of the line chart: every label becomes a spoke, every series
+ * becomes a closed polygon whose vertices sit at that series' value along each
+ * spoke. It extends `Chart` rather than `CartesianChart` because none of the
+ * cartesian furniture applies — there is no baseline, no band scale, and the
+ * axis is drawn as a web rather than as two edges.
+ *
+ * Colour identifies a *series* here (unlike pie, where it identifies a
+ * category), so the base legend and mute behaviour are exactly right.
+ */
+
+
+/** Clearance between the outer ring and its spoke labels, in pixels. */
+const SPOKE_GAP = 12;
+
+class RadarChart extends Chart {
+  /** The web is drawn inside the plot box, so no axis padding is measured. */
+  labelSpec() {
+    return { valueLabels: [], categoryLabels: [] };
+  }
+
+  /** Radial domain. Starts at zero unless told otherwise — a radar of ratios. */
+  computeValueAxis() {
+    const opts = this.options;
+    let [min, max] = valueExtent(this.visibleSeries(), {
+      baseline: opts.axis.beginAtZero ? 'zero' : null
+    });
+    if (isNum(opts.axis.min)) min = opts.axis.min;
+    if (isNum(opts.axis.max)) max = opts.axis.max;
+
+    const nice = niceTicks(min, max, this.options.radar.levels);
+    const lo = isNum(opts.axis.min) ? opts.axis.min : Math.min(0, nice.min);
+    const hi = isNum(opts.axis.max) ? opts.axis.max : nice.max;
+    const ticks = nice.ticks.filter((v) => v >= lo - 1e-9 && v <= hi + 1e-9);
+    this.valueAxis = { min: lo, max: hi, ticks: ticks.length ? ticks : [lo, hi] };
+    return this.valueAxis;
+  }
+
+  computeGeometry() {
+    const cfg = this.options.radar;
+    const plot = this.plot;
+    const va = this.computeValueAxis();
+    this.centre = { x: plot.x + plot.w / 2, y: plot.y + plot.h / 2 };
+
+    const count = this.data.labels.length;
+    const step = count > 0 ? TAU / count : TAU;
+    const start = cfg.startAngle * DEG;
+    this.angles = this.data.labels.map((_, i) => start + i * step);
+
+    // Spoke labels sit outside the web, so the web gives up the room they need.
+    let room = { x: 0, y: 0 };
+    if (this.options.showAxis && count) {
+      const axis = this.options.axis;
+      const ctx = this.renderer.ctx;
+      ctx.save();
+      ctx.font = axisFont(axis, '500');
+      let widest = 0;
+      for (const l of this.data.labels) widest = Math.max(widest, ctx.measureText(l).width);
+      ctx.restore();
+      // Only the labels either side of the web claim horizontal room, and they
+      // hang outward from their spoke — so roughly 60% of the widest string.
+      // Capped, because one long category name must cost the web some radius,
+      // never all of it: past this the label is left to overhang instead.
+      room = {
+        x: Math.min(plot.w * 0.3, SPOKE_GAP + Math.ceil(widest * 0.6)),
+        y: Math.min(plot.h * 0.22, SPOKE_GAP + axis.fontSize)
+      };
+    }
+
+    this.radius = Math.max(10, Math.min(plot.w / 2 - room.x, plot.h / 2 - room.y));
+    this.span = va.max - va.min || 1;
+  }
+
+  /** Pixel distance from the centre for a data value. */
+  radiusFor(value) {
+    const va = this.valueAxis;
+    return clamp((value - va.min) / this.span, 0, 1) * this.radius;
+  }
+
+  pointAt(index, value) {
+    const a = this.angles[index];
+    const r = this.radiusFor(value);
+    return { x: this.centre.x + Math.cos(a) * r, y: this.centre.y + Math.sin(a) * r };
+  }
+
+  /**
+   * A series' polygon. Nulls are skipped rather than treated as zero — a gap
+   * in a radar is missing data, and pinning it to the centre would invent a
+   * reading of nothing.
+   */
+  polygonFor(series) {
+    const pts = [];
+    series.values.forEach((v, i) => {
+      if (!isNum(v)) return;
+      const p = this.pointAt(i, v);
+      p.index = i;
+      p.value = v;
+      pts.push(p);
+    });
+    return pts;
+  }
+
+  /** Budget from the web's disc, not the plot box — same reasoning as pie. */
+  particleBudget() {
+    const disc = Math.PI * this.radius * this.radius;
+    return Math.min(this.options.particle.max, Math.round(this.budgetForArea(disc) * 1.15));
+  }
+
+  buildTargets(budget) {
+    const cfg = this.options.radar;
+    const p = this.options.particle;
+    const series = this.visibleSeries();
+    const targets = [];
+    if (!series.length || this.data.labels.length < 3) return targets;
+
+    const rng = createRng(0x4ada7);
+    const polys = (this.polygons = series.map((s) => this.polygonFor(s)));
+
+    // Weight by perimeter, so a series hugging the centre does not claim the
+    // same ink as one out at the rim.
+    const weights = polys.map((pts) => {
+      if (pts.length < 2) return 1;
+      let per = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i];
+        const b = pts[(i + 1) % pts.length];
+        per += Math.hypot(b.x - a.x, b.y - a.y);
+      }
+      return Math.max(per, 1);
+    });
+    const counts = allocate(weights, budget, 40);
+
+    series.forEach((s, si) => {
+      const pts = polys[si];
+      const total = counts[si];
+      if (!total || !pts.length) return;
+
+      if (pts.length < 3) {
+        // Too few readings to enclose anything — mark what there is.
+        for (const pt of pts) {
+          sampleDisc(pt.x, pt.y, cfg.pointRadius, Math.max(8, Math.floor(total / pts.length)), rng, (x, y, d) =>
+            targets.push(this.target(x, y, s.color, rng, 1.1 - d * 0.3, 1, si, pt.index))
+          );
+        }
+        return;
+      }
+
+      const vertexBudget = cfg.points ? Math.min(Math.round(total * 0.14), pts.length * 24) : 0;
+      const rest = total - vertexBudget;
+      const fillCount = cfg.fill ? Math.round(rest * clamp(cfg.fillAmount, 0, 0.95)) : 0;
+      const strokeCount = rest - fillCount;
+
+      if (fillCount > 0) {
+        samplePolygonFan(this.centre, pts, fillCount, rng, cfg.fillFade, (x, y, t) =>
+          targets.push(this.target(x, y, s.color, rng, 0.8, 0.34 + t * 0.3, si, -1))
+        );
+      }
+
+      // Close the ring by repeating the first vertex, so the last edge is
+      // sampled like every other one.
+      const ring = pts.concat([pts[0]]);
+      samplePath(ring, strokeCount, cfg.width, rng, (x, y, edge) =>
+        targets.push(this.target(x, y, s.color, rng, 1 - edge * 0.25, 1 - edge * 0.3, si, -1))
+      );
+
+      if (vertexBudget > 0) {
+        const per = Math.max(5, Math.floor(vertexBudget / pts.length));
+        for (const pt of pts) {
+          sampleDisc(pt.x, pt.y, cfg.pointRadius, per, rng, (x, y, d) =>
+            targets.push(this.target(x, y, s.color, rng, 1.1 - d * 0.3, 1, si, pt.index))
+          );
+        }
+      }
+    });
+
+    if (targets.length > p.max) targets.length = p.max;
+    return targets;
+  }
+
+  target(x, y, color, rng, sizeScale, alpha, group, index) {
+    const p = this.options.particle;
+    const j = p.sizeJitter;
+    return {
+      x,
+      y,
+      color,
+      size: p.size * sizeScale * (1 - j * 0.5 + rng() * j),
+      alpha,
+      group,
+      index
+    };
+  }
+
+  // ---------------------------------------------------------------- web ----
+
+  drawBackdrop(ctx) {
+    const opts = this.options;
+    if (!opts.showGrid && !opts.showAxis) return;
+    const axis = opts.axis;
+    const cfg = opts.radar;
+    const count = this.data.labels.length;
+    if (count < 3) return;
+
+    ctx.save();
+    ctx.lineWidth = 1;
+
+    if (opts.showGrid) {
+      ctx.strokeStyle = axis.gridColor;
+      for (const t of this.valueAxis.ticks) {
+        const r = this.radiusFor(t);
+        if (r <= 0.5) continue;
+        ctx.beginPath();
+        if (cfg.shape === 'circle') {
+          ctx.arc(this.centre.x, this.centre.y, r, 0, TAU);
+        } else {
+          this.angles.forEach((a, i) => {
+            const x = this.centre.x + Math.cos(a) * r;
+            const y = this.centre.y + Math.sin(a) * r;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          });
+          ctx.closePath();
+        }
+        ctx.stroke();
+      }
+    }
+
+    if (opts.showAxis) {
+      // Spokes.
+      ctx.strokeStyle = axis.color;
+      ctx.beginPath();
+      for (const a of this.angles) {
+        ctx.moveTo(this.centre.x, this.centre.y);
+        ctx.lineTo(this.centre.x + Math.cos(a) * this.radius, this.centre.y + Math.sin(a) * this.radius);
+      }
+      ctx.stroke();
+
+      ctx.fillStyle = axis.textColor;
+      ctx.font = axisFont(axis);
+      ctx.textBaseline = 'middle';
+
+      // Value ticks, stacked up the first spoke only — repeating them on every
+      // spoke turns the web into noise.
+      if (axis.yLabels) {
+        ctx.textAlign = 'right';
+        const a = this.angles[0];
+        for (const t of this.valueAxis.ticks) {
+          const r = this.radiusFor(t);
+          if (r <= 0.5) continue;
+          ctx.fillText(
+            formatValue(t, this.options),
+            this.centre.x + Math.cos(a) * r - 5,
+            this.centre.y + Math.sin(a) * r
+          );
+        }
+      }
+
+      if (axis.xLabels) this.drawSpokeLabels(ctx, axis);
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Spoke labels ride just outside the web on their own bearing. Alignment
+   * follows the bearing so a label never overhangs the chart: labels on the
+   * right hang right, on the left hang left, and the ones pointing straight up
+   * or down centre over their spoke.
+   */
+  drawSpokeLabels(ctx, axis) {
+    const r = this.radius + SPOKE_GAP;
+    ctx.font = axisFont(axis, '500');
+    this.data.labels.forEach((label, i) => {
+      const a = this.angles[i];
+      const cos = Math.cos(a);
+      const sin = Math.sin(a);
+      const upright = Math.abs(cos) < 0.25;
+      ctx.textAlign = upright ? 'center' : cos > 0 ? 'left' : 'right';
+      ctx.textBaseline = upright ? (sin > 0 ? 'top' : 'alphabetic') : 'middle';
+      ctx.fillText(label, this.centre.x + cos * r, this.centre.y + sin * r);
+    });
+  }
+
+  drawForeground(ctx) {
+    if (this.hover) {
+      const i = this.hover.index;
+      const a = this.angles[i];
+      ctx.save();
+      ctx.strokeStyle = this.options.axis.crosshairColor;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath();
+      ctx.moveTo(this.centre.x, this.centre.y);
+      ctx.lineTo(this.centre.x + Math.cos(a) * this.radius, this.centre.y + Math.sin(a) * this.radius);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      for (const s of this.visibleSeries()) {
+        const v = s.values[i];
+        if (!isNum(v)) continue;
+        const pt = this.pointAt(i, v);
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, this.options.radar.pointRadius + 3.5, 0, TAU);
+        ctx.strokeStyle = s.color;
+        ctx.globalAlpha = 0.9;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      ctx.restore();
+    }
+
+    if (this.options.showValues) this.drawValueLabels(ctx);
+  }
+
+  drawValueLabels(ctx) {
+    const axis = this.options.axis;
+    ctx.save();
+    ctx.font = axisFont(axis, '600');
+    ctx.fillStyle = axis.textColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const s of this.visibleSeries()) {
+      s.values.forEach((v, i) => {
+        if (!isNum(v)) return;
+        const pt = this.pointAt(i, v);
+        // Nudge outward along the spoke so the label clears its own vertex.
+        const a = this.angles[i];
+        ctx.fillText(formatValue(v, this.options), pt.x + Math.cos(a) * 12, pt.y + Math.sin(a) * 12);
+      });
+    }
+    ctx.restore();
+  }
+
+  // -------------------------------------------------------------- hover ----
+
+  /** Nearest spoke by bearing; the tooltip then lists every series on it. */
+  handleHover(x, y) {
+    const count = this.data.labels.length;
+    if (!count || !this.angles) return;
+
+    const dx = x - this.centre.x;
+    const dy = y - this.centre.y;
+    if (Math.hypot(dx, dy) > this.radius * 1.12) {
+      this.hover = null;
+      this.tooltip.hide();
+      return;
+    }
+
+    const start = this.options.radar.startAngle * DEG;
+    const step = TAU / count;
+    let k = Math.round((Math.atan2(dy, dx) - start) / step) % count;
+    if (k < 0) k += count;
+
+    const entries = [];
+    for (const s of this.visibleSeries()) {
+      const v = s.values[k];
+      if (!isNum(v)) continue;
+      entries.push({ name: s.name, value: formatValue(v, this.options), color: s.color });
+    }
+
+    if (!entries.length) {
+      this.hover = null;
+      this.tooltip.hide();
+      return;
+    }
+
+    this.hover = { index: k };
+    const a = this.angles[k];
+    this.tooltip.show(
+      {
+        title: this.data.labels[k],
+        entries,
+        x: this.centre.x + Math.cos(a) * this.radius * 0.8,
+        y: this.centre.y + Math.sin(a) * this.radius * 0.8
+      },
+      { width: this.renderer.width, height: this.renderer.height },
+      this.options
+    );
+  }
+}
+
 // ---- src/index.js ------------------------------------------------------
 /**
  * Particle Charts — public entry point.
  */
 
 
-const version = '0.2.0';
+const version = '1.0.0';
 
 const TYPES = {
   line: LineChart,
   area: LineChart,
   bar: BarChart,
   column: BarChart,
+  bubble: BubbleChart,
+  scatter: BubbleChart,
   pie: PieChart,
-  donut: PieChart
+  donut: PieChart,
+  radar: RadarChart,
+  spider: RadarChart
 };
 
 /**
@@ -3263,22 +4276,31 @@ function shorthand(type) {
 const line = shorthand('line');
 const area = shorthand('area');
 const bar = shorthand('bar');
+const bubble = shorthand('bubble');
 const pie = shorthand('pie');
 const donut = shorthand('donut');
+const radar = shorthand('radar');
+
+/* Kept on one line: the bundler strips re-exports with a single-line match. */
 
   var api = {
     ParticleChart: ParticleChart,
     Chart: Chart,
     LineChart: LineChart,
     BarChart: BarChart,
+    BubbleChart: BubbleChart,
     PieChart: PieChart,
+    RadarChart: RadarChart,
     line: line,
     area: area,
     bar: bar,
+    bubble: bubble,
     pie: pie,
     donut: donut,
+    radar: radar,
     defaults: DEFAULTS,
     palette: DEFAULT_PALETTE,
+    themes: THEMES,
     version: version
   };
   api.ParticleChart.create = api.ParticleChart;

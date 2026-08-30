@@ -11,13 +11,16 @@ import { installDomStub } from './dom-stub.js';
 
 installDomStub();
 
-const { ParticleChart, LineChart, BarChart, PieChart, defaults, palette } = await import('../src/index.js');
+const { ParticleChart, LineChart, BarChart, BubbleChart, PieChart, RadarChart, defaults, palette } =
+  await import('../src/index.js');
 const { normalizeData, valueExtent } = await import('../src/core/data.js');
 const { niceTicks, linearScale, bandScale, pointScale, thinTicks } = await import('../src/core/scale.js');
-const { monotoneCurve, samplePath, sampleRect, sampleSector, sampleUnderPath } = await import('../src/core/sampling.js');
-const { resolveOptions } = await import('../src/core/options.js');
+const { monotoneCurve, samplePath, sampleRect, sampleSector, sampleUnderPath, samplePolygonFan } =
+  await import('../src/core/sampling.js');
+const { resolveOptions, THEMES } = await import('../src/core/options.js');
+const { drawAxis } = await import('../src/core/axis.js');
 const { parseColor, colorAt } = await import('../src/core/color.js');
-const { formatNumber } = await import('../src/core/utils.js');
+const { formatNumber, createRng } = await import('../src/core/utils.js');
 const { allocate } = await import('../src/core/particles.js');
 
 let passed = 0;
@@ -277,7 +280,122 @@ test('resolveOptions: donut gets an inner radius, pie does not', () => {
 
 test('resolveOptions: defaults are not mutated', () => {
   resolveOptions({ particle: { size: 99 } });
-  eq(defaults.particle.size, 0.5);
+  eq(defaults.particle.size, 0.8);
+});
+
+/* A canvas that remembers what it was asked to draw, so the axis switches can
+   be asserted on their output rather than on their options. */
+function recordingCtx() {
+  const drawn = { texts: [], strokes: [] };
+  const ctx = {
+    strokeStyle: '', fillStyle: '', font: '', lineWidth: 1, textAlign: '', textBaseline: '',
+    save() {}, restore() {}, beginPath() {}, moveTo() {}, lineTo() {},
+    translate() {}, rotate() {}, setLineDash() {},
+    fillText(text) { drawn.texts.push(String(text)); },
+    stroke() { drawn.strokes.push(ctx.strokeStyle); },
+    measureText(text) { return { width: String(text).length * 6 }; }
+  };
+  return { ctx, drawn };
+}
+
+const AXIS_SPEC = {
+  plot: { x: 40, y: 10, w: 200, h: 100 },
+  padding: { top: 12, right: 14, bottom: 10, left: 40 },
+  valueTicks: [{ value: 0, label: '0', pos: 110 }, { value: 60, label: '60', pos: 10 }],
+  categoryTicks: [{ label: 'Jan', pos: 40 }, { label: 'Feb', pos: 240 }]
+};
+
+test('showAxis: false draws no baseline, ticks or labels', () => {
+  const options = resolveOptions({ showAxis: false, showGrid: true });
+  const { ctx, drawn } = recordingCtx();
+  drawAxis(ctx, AXIS_SPEC, options);
+  eq(drawn.texts, [], 'no tick labels');
+  assert(!drawn.strokes.includes(options.axis.color), 'no baseline stroke');
+  assert(drawn.strokes.includes(options.axis.gridColor), 'grid still drawn');
+});
+
+test('showGrid: false keeps the axis and its labels', () => {
+  const options = resolveOptions({ showAxis: true, showGrid: false });
+  const { ctx, drawn } = recordingCtx();
+  drawAxis(ctx, AXIS_SPEC, options);
+  assert(drawn.texts.includes('60') && drawn.texts.includes('Jan'), 'labels drawn');
+  assert(drawn.strokes.includes(options.axis.color), 'baseline drawn');
+  assert(!drawn.strokes.includes(options.axis.gridColor), 'no grid stroke');
+});
+
+test('showAxis and showGrid both off draws nothing at all', () => {
+  const options = resolveOptions({ showAxis: false, showGrid: false });
+  const { ctx, drawn } = recordingCtx();
+  drawAxis(ctx, AXIS_SPEC, options);
+  eq(drawn.texts, []);
+  eq(drawn.strokes, []);
+});
+
+test('legend: sits under the plot where colour keys a series', () => {
+  for (const type of ['line', 'area', 'bar', 'column', 'bubble', 'scatter', 'radar', 'spider']) {
+    const o = resolveOptions({ type });
+    eq(o.legend.position, 'bottom', type + ' position');
+    eq(o.legend.align, 'center', type + ' align');
+  }
+  // Pie and donut key colour to the category, so they keep the plain default.
+  for (const type of ['pie', 'donut']) {
+    const o = resolveOptions({ type });
+    eq(o.legend.position, 'top', type + ' position');
+    eq(o.legend.align, 'start', type + ' align');
+  }
+});
+
+test('legend: an explicit position or align outranks the type default', () => {
+  eq(resolveOptions({ type: 'bar', legendPosition: 'left' }).legend.position, 'left');
+  eq(resolveOptions({ type: 'bar', legendAlign: 'end' }).legend.align, 'end');
+  const nested = resolveOptions({ type: 'radar', legend: { position: 'right', align: 'start' } });
+  eq(nested.legend.position, 'right');
+  eq(nested.legend.align, 'start');
+  // Setting only one still leaves the other at the type default.
+  eq(resolveOptions({ type: 'line', legendPosition: 'top' }).legend.align, 'center');
+});
+
+test('theme: dark is the default and matches the shipped defaults', () => {
+  const o = resolveOptions({});
+  eq(o.theme, 'dark');
+  eq(o.axis.color, THEMES.dark.axis.color);
+  eq(o.legend.color, THEMES.dark.legend.color);
+  eq(o.tooltip.background, THEMES.dark.tooltip.background);
+});
+
+test('theme: light repaints every piece of chrome', () => {
+  const o = resolveOptions({ theme: 'light' });
+  eq(o.axis.color, THEMES.light.axis.color);
+  eq(o.axis.gridColor, THEMES.light.axis.gridColor);
+  eq(o.axis.textColor, THEMES.light.axis.textColor);
+  eq(o.axis.crosshairColor, THEMES.light.axis.crosshairColor);
+  eq(o.legend.color, THEMES.light.legend.color);
+  eq(o.tooltip.background, THEMES.light.tooltip.background);
+});
+
+test('theme: leaves the particles alone', () => {
+  const light = resolveOptions({ theme: 'light' });
+  eq(light.particle.color, defaults.particle.color);
+  eq(light.particle.size, defaults.particle.size);
+});
+
+test('theme: an explicit colour outranks the palette', () => {
+  eq(resolveOptions({ theme: 'light', axisColor: '#ff0000' }).axis.color, '#ff0000');
+});
+
+test('theme: a later restyle does not repaint chrome the caller set', () => {
+  const first = resolveOptions({ theme: 'light', axisColor: '#ff0000' });
+  const second = resolveOptions({ particleSize: 2 }, first);
+  eq(second.axis.color, '#ff0000', 'override survives');
+  eq(second.axis.gridColor, THEMES.light.axis.gridColor, 'theme survives');
+});
+
+test('theme: switching themes on a live chart repaints chrome', () => {
+  const dark = resolveOptions({});
+  const light = resolveOptions({ theme: 'light' }, dark);
+  eq(light.theme, 'light');
+  eq(light.axis.color, THEMES.light.axis.color);
+  eq(resolveOptions({ theme: 'dark' }, light).axis.color, THEMES.dark.axis.color);
 });
 
 // ----------------------------------------------------------------- colour ----
@@ -387,10 +505,310 @@ test('type dispatch picks the right class', () => {
   assert(new ParticleChart(h(), { type: 'donut', data: [1, 2] }) instanceof PieChart);
 });
 
+// ------------------------------------------------------------ new types ----
+
+test('normalizeData: a third value becomes `sizes`, and only then', () => {
+  const bubbles = normalizeData([{ x: 1, y: 2, r: 9 }, { x: 3, y: 4, r: 5 }]);
+  eq(bubbles.series[0].values, [2, 4]);
+  eq(bubbles.series[0].sizes, [9, 5]);
+  eq(normalizeData([['a', 2, 7]]).series[0].sizes, [7]);
+  eq(normalizeData({ labels: ['a', 'b'], values: [1, 2], sizes: [5, 6] }).series[0].sizes, [5, 6]);
+  // Every shape that never carried a size must come back untouched.
+  assert(!('sizes' in normalizeData([4, 8, 15]).series[0]), 'plain numbers');
+  assert(!('sizes' in normalizeData({ series: [{ name: 'A', data: [{ x: 1, y: 2 }] }] }).series[0]), 'x/y points');
+  assert(!('sizes' in normalizeData({ Chrome: 62 }).series[0]), 'record');
+});
+
+test('samplePolygonFan: emits exactly `count`, all inside the shape', () => {
+  const rng = createRng(7);
+  const hub = { x: 0, y: 0 };
+  const pts = [{ x: 0, y: -100 }, { x: 95, y: -31 }, { x: 59, y: 81 }, { x: -59, y: 81 }, { x: -95, y: -31 }];
+  let n = 0;
+  let outside = 0;
+  samplePolygonFan(hub, pts, 500, rng, 0.5, (x, y) => {
+    n++;
+    if (Math.hypot(x, y) > 101) outside++;
+  });
+  eq(n, 500);
+  eq(outside, 0);
+  let none = 0;
+  samplePolygonFan(hub, pts.slice(0, 2), 100, rng, 0, () => none++);
+  eq(none, 0, 'fewer than three points encloses nothing');
+});
+
+test('bubble: sizes map to radius by area, not by radius', () => {
+  const host = makeHost();
+  const chart = new ParticleChart(host, {
+    type: 'bubble',
+    minRadius: 5,
+    maxRadius: 45,
+    data: [{ x: 1, y: 1, r: 0 }, { x: 2, y: 2, r: 50 }, { x: 3, y: 3, r: 100 }]
+  });
+  const [lo, mid, hi] = chart.marks.map((m) => m.r);
+  eq(Math.round(lo), 5, 'floor');
+  eq(Math.round(hi), 45, 'ceiling');
+  // Half the value must cover half the *ink*, so r is the sqrt midpoint.
+  const expected = Math.sqrt((5 * 5 + 45 * 45) / 2);
+  assert(Math.abs(mid - expected) < 0.5, 'mid radius ' + mid + ' vs ' + expected);
+  chart.destroy();
+});
+
+test('bubble: numeric x gets round ticks, not one per datum', () => {
+  const chart = new ParticleChart(makeHost(), {
+    type: 'bubble',
+    data: { series: [{ name: 'A', data: [{ x: 7, y: 1, r: 1 }, { x: 23, y: 2, r: 2 }, { x: 84, y: 3, r: 3 }] }] }
+  });
+  eq(chart.xa.domain, [0, 100]);
+  eq(chart.xa.ticks, [0, 20, 40, 60, 80, 100]);
+  // The marks must fall between the ticks, not on them — that is the whole
+  // difference between a scatter and a category axis wearing numbers.
+  const tickPx = new Set(chart.categoryTicks().map((t) => Math.round(t.pos)));
+  eq(chart.marks.filter((m) => tickPx.has(Math.round(m.x))).length, 0);
+  // Rounding the domain out also keeps the outermost bubbles inside the plot.
+  const left = Math.min(...chart.marks.map((m) => m.x - m.r));
+  const right = Math.max(...chart.marks.map((m) => m.x + m.r));
+  assert(left >= chart.plot.x, 'left edge ' + left + ' >= ' + chart.plot.x);
+  assert(right <= chart.plot.x + chart.plot.w, 'right edge inside plot');
+  chart.destroy();
+});
+
+test('bubble: each series plots at its own x, not the first series\'', () => {
+  const data = {
+    series: [
+      { name: 'A', data: [{ x: 6, y: 31, r: 1 }, { x: 14, y: 44, r: 2 }] },
+      { name: 'B', data: [{ x: 9, y: 12, r: 3 }, { x: 17, y: 24, r: 4 }] }
+    ]
+  };
+  eq(normalizeData(data).series.map((s) => s.xs), [[6, 14], [9, 17]], 'kept per series');
+
+  const chart = new ParticleChart(makeHost(), { type: 'bubble', data });
+  const xs = chart.marks.map((m) => Math.round(m.x));
+  eq(new Set(xs).size, 4, 'four distinct positions, not two pairs');
+  // B sits to the right of A at both indices, as its values say.
+  assert(xs[2] > xs[0] && xs[3] > xs[1], 'series B is offset right: ' + xs.join(','));
+  chart.destroy();
+});
+
+test('bubble: a categorical x axis is left alone', () => {
+  const chart = new ParticleChart(makeHost(), {
+    type: 'bubble',
+    data: { labels: ['a', 'b', 'c'], values: [1, 2, 3] }
+  });
+  eq(chart.xa, null, 'no continuous axis');
+  eq(chart.categoryTicks().map((t) => t.label), ['a', 'b', 'c']);
+  chart.destroy();
+});
+
+test('bubble: no size data degrades to a scatter rather than failing', () => {
+  const chart = new ParticleChart(makeHost(), { type: 'bubble', data: [4, 9, 2] });
+  eq(chart.sizeDomain, null);
+  eq(new Set(chart.marks.map((m) => m.r)).size, 1, 'every mark takes the mid radius');
+  assert(chart.field.count > 0, 'still draws');
+  chart.destroy();
+});
+
+test('bubble: hover picks the nearest bubble, not the nearest column', () => {
+  const chart = new ParticleChart(makeHost(), {
+    type: 'bubble',
+    data: { series: [{ name: 'A', data: [{ x: 1, y: 10, r: 4 }, { x: 2, y: 90, r: 9 }] }] }
+  });
+  const [low, high] = chart.marks;
+  chart.handleHover(high.x, high.y);
+  eq(chart.hover, { index: 1 }, 'on the bubble');
+  chart.handleHover(low.x, low.y);
+  eq(chart.hover, { index: 0 }, 'on the other bubble');
+  // In the second bubble's column but at the first one's height: a category
+  // hit test would answer 1 here. Touching no bubble, the answer is nothing.
+  chart.handleHover(high.x, low.y);
+  eq(chart.hover, null, 'column without a bubble selects nothing');
+  chart.destroy();
+});
+
+test('radar: one spoke per label, closed polygon per series', () => {
+  const chart = new ParticleChart(makeHost(), {
+    type: 'radar',
+    data: {
+      labels: ['a', 'b', 'c', 'd', 'e'],
+      series: [{ name: 'A', data: [1, 2, 3, 4, 5] }, { name: 'B', data: [5, 4, 3, 2, 1] }]
+    }
+  });
+  eq(chart.angles.length, 5);
+  eq(chart.polygons.map((p) => p.length), [5, 5]);
+  assert(chart.radius > 10, 'web has room');
+  assert(chart.field.count > 0, 'particles emitted');
+  // First spoke points straight up by default.
+  assert(Math.abs(chart.angles[0] + Math.PI / 2) < 1e-9, 'startAngle -90');
+  chart.destroy();
+});
+
+test('radar: nulls leave a gap instead of reading as zero', () => {
+  const chart = new ParticleChart(makeHost(), {
+    type: 'radar',
+    data: { labels: ['a', 'b', 'c', 'd'], series: [{ name: 'S', data: [5, null, 3, 4] }] }
+  });
+  eq(chart.polygons[0].length, 3);
+  eq(chart.polygons[0].map((p) => p.index), [0, 2, 3]);
+  chart.destroy();
+});
+
+test('radar: hover snaps to the nearest spoke', () => {
+  const chart = new ParticleChart(makeHost(), {
+    type: 'radar',
+    data: { labels: ['N', 'E', 'S', 'W'], values: [1, 2, 3, 4] }
+  });
+  chart.handleHover(chart.centre.x, chart.centre.y - chart.radius * 0.6); // due north
+  eq(chart.hover, { index: 0 });
+  chart.handleHover(chart.centre.x + chart.radius * 0.6, chart.centre.y); // due east
+  eq(chart.hover, { index: 1 });
+  chart.handleHover(chart.centre.x + chart.radius * 4, chart.centre.y); // off the web
+  eq(chart.hover, null);
+  chart.destroy();
+});
+
+test('radar and bubble survive degenerate data', () => {
+  for (const type of ['radar', 'bubble']) {
+    for (const data of [[], [1], [1, 2]]) {
+      const chart = new ParticleChart(makeHost(), { type, data });
+      chart.draw(0);
+      chart.destroy();
+    }
+  }
+});
+
+test('new types resolve through every registered name', () => {
+  const cases = [['bubble', BubbleChart], ['scatter', BubbleChart], ['radar', RadarChart], ['spider', RadarChart]];
+  for (const [type, Ctor] of cases) {
+    const chart = new ParticleChart(makeHost(), { type, data: { labels: ['a', 'b', 'c'], values: [1, 2, 3] } });
+    assert(chart instanceof Ctor, type + ' -> ' + Ctor.name);
+    chart.destroy();
+  }
+});
+
+test('adding types left the existing ones alone', () => {
+  const cases = [['line', LineChart], ['area', LineChart], ['bar', BarChart], ['column', BarChart],
+    ['pie', PieChart], ['donut', PieChart]];
+  for (const [type, Ctor] of cases) {
+    const chart = new ParticleChart(makeHost(), { type, data: { labels: ['a', 'b'], values: [1, 2] } });
+    assert(chart instanceof Ctor, type + ' -> ' + Ctor.name);
+    chart.destroy();
+  }
+});
+
+// --------------------------------------------------------- render budget ----
+
+/** Run `frames` display frames at `hz`, counting how many actually painted. */
+function paintsOver(chart, frames, hz) {
+  let painted = 0;
+  const original = chart.draw.bind(chart);
+  chart.draw = (now) => {
+    painted++;
+    return original(now);
+  };
+  for (let i = 1; i <= frames; i++) globalThis.__flushFrame((i * 1000) / hz);
+  return painted;
+}
+
+test('loop: particles in flight are painted every frame', () => {
+  const chart = new ParticleChart(makeHost(), { type: 'bar', data: [4, 9, 6], particleJitter: 1 });
+  eq(paintsOver(chart, 30, 60), 30);
+  chart.destroy();
+});
+
+test('loop: a settled chart drifts at ~30fps, whatever the display', () => {
+  const at60 = new ParticleChart(makeHost(), {
+    type: 'bar', data: [4, 9, 6], particleJitter: 1, animate: false
+  });
+  eq(paintsOver(at60, 60, 60), 30, '60Hz: every second frame');
+  at60.destroy();
+
+  const at120 = new ParticleChart(makeHost(), {
+    type: 'bar', data: [4, 9, 6], particleJitter: 1, animate: false
+  });
+  eq(paintsOver(at120, 120, 120), 30, '120Hz: every fourth frame');
+  at120.destroy();
+});
+
+test('loop: with no drift a settled chart stops scheduling frames', () => {
+  const chart = new ParticleChart(makeHost(), {
+    type: 'bar', data: [4, 9, 6], particleJitter: 0, animate: false
+  });
+  paintsOver(chart, 5, 60);
+  eq(chart.frame, 0, 'nothing scheduled');
+  eq(paintsOver(chart, 60, 60), 0, 'and nothing painted');
+  chart.destroy();
+});
+
+test('loop: a chart scrolled out of view stops, and resumes on return', () => {
+  const chart = new ParticleChart(makeHost(), { type: 'bar', data: [4, 9, 6], particleJitter: 1 });
+  chart.inViewport = false;
+  chart.onVisibility();
+  paintsOver(chart, 10, 60);
+  eq(chart.frame, 0, 'stopped');
+  eq(paintsOver(chart, 30, 60), 0, 'stays stopped');
+  chart.inViewport = true;
+  chart.onVisibility();
+  assert(chart.frame !== 0, 'resumed');
+  chart.destroy();
+});
+
+test('loop: a hidden tab stops the chart', () => {
+  const chart = new ParticleChart(makeHost(), { type: 'bar', data: [4, 9, 6], particleJitter: 1 });
+  document.visibilityState = 'hidden';
+  chart.onVisibility();
+  paintsOver(chart, 10, 60);
+  eq(chart.frame, 0);
+  document.visibilityState = 'visible';
+  chart.destroy();
+});
+
+test('axis: the spec is built once per layout, not once per frame', () => {
+  const chart = new ParticleChart(makeHost(), {
+    type: 'bar', data: { labels: ['Jan', 'Feb', 'Mar'], values: [4, 9, 6] }
+  });
+  let built = 0;
+  const original = chart.axisSpec.bind(chart);
+  chart.axisSpec = () => {
+    built++;
+    return original();
+  };
+
+  chart.spec = null; // as computeGeometry leaves it
+  for (let i = 0; i < 20; i++) chart.draw(i * 16);
+  eq(built, 1, 'twenty frames, one spec');
+
+  chart.layout({});
+  chart.draw(1000);
+  eq(built, 2, 'a layout invalidates it');
+  chart.destroy();
+});
+
+test('resize: a burst of observer callbacks coalesces into one layout', () => {
+  const chart = new ParticleChart(makeHost(), { type: 'bar', data: [4, 9, 6] });
+  const observer = globalThis.__resizeObservers[globalThis.__resizeObservers.length - 1];
+  assert(observer, 'chart registered a ResizeObserver');
+
+  let layouts = 0;
+  const original = chart.layout.bind(chart);
+  chart.layout = (flags) => {
+    layouts++;
+    return original(flags);
+  };
+
+  for (let i = 0; i < 10; i++) observer.callback();
+  eq(layouts, 0, 'nothing lays out synchronously');
+  globalThis.__flushFrame(16);
+  eq(layouts, 1, 'ten resizes, one layout');
+
+  for (let i = 0; i < 4; i++) observer.callback();
+  globalThis.__flushFrame(32);
+  eq(layouts, 2, 'and the next frame is free to run again');
+  chart.destroy();
+});
+
 test('unknown type throws a helpful error', () => {
   let message = '';
   try {
-    new ParticleChart(makeHost(), { type: 'radar', data: [1] });
+    new ParticleChart(makeHost(), { type: 'sankey', data: [1] });
   } catch (err) {
     message = err.message;
   }

@@ -6,8 +6,13 @@
  *   {
  *     labels:  string[],                                  // category axis
  *     xValues: number[] | null,                           // set when x is numeric
- *     series:  [{ name, color, values: (number|null)[] }]
+ *     series:  [{ name, color, values, sizes?: (number|null)[], xs?: (number|null)[] }]
  *   }
+ *
+ * `sizes` (the bubble chart's third dimension) and `xs` (a series' own numeric
+ * x positions, which the shared `xValues` cannot represent for more than one
+ * series) are attached only when the input carried them, so every other shape
+ * normalises exactly as it always did.
  *
  * Accepted inputs (all plain JSON):
  *   [4, 8, 15]
@@ -16,12 +21,15 @@
  *   { labels: [...], series: [{ name, data, color }, ...] }
  *   [{ name: 'A', data: [...] }, { name: 'B', data: [...] }]
  *   { series: [{ name, data: [{ x: 1, y: 4 }, ...] }] }
+ *   { series: [{ name, data: [{ x: 1, y: 4, r: 9 }, ...] }] }   // bubble sizes
  */
 
 import { isNum, isPlainObject } from './utils.js';
 
 const LABEL_KEYS = ['label', 'name', 'x', 'key', 'category', 'date'];
 const VALUE_KEYS = ['value', 'y', 'count', 'total', 'amount'];
+/** A third dimension, read only by the bubble chart. Absent for every other type. */
+const SIZE_KEYS = ['r', 'size', 'z', 'radius', 'weight'];
 
 function pick(obj, keys) {
   for (const k of keys) if (obj[k] !== undefined) return obj[k];
@@ -38,8 +46,10 @@ function toValue(v) {
 function readPoints(list) {
   const labels = [];
   const values = [];
+  const sizes = [];
   const xs = [];
   let hasLabels = false;
+  let hasSizes = false;
   let numericX = true;
 
   list.forEach((item, i) => {
@@ -57,6 +67,9 @@ function readPoints(list) {
         xs.push(i);
       }
       values.push(toValue(rawValue !== undefined ? rawValue : null));
+      const rawSize = pick(item, SIZE_KEYS);
+      if (rawSize !== undefined) hasSizes = true;
+      sizes.push(toValue(rawSize !== undefined ? rawSize : null));
     } else if (Array.isArray(item)) {
       hasLabels = true;
       labels.push(String(item[0]));
@@ -64,14 +77,25 @@ function readPoints(list) {
       if (nx === null) numericX = false;
       else xs.push(nx);
       values.push(toValue(item[1]));
+      if (item.length > 2) hasSizes = true;
+      sizes.push(toValue(item.length > 2 ? item[2] : null));
     } else {
       labels.push(String(i));
       xs.push(i);
       values.push(toValue(item));
+      sizes.push(null);
     }
   });
 
-  return { labels, values, xs, hasLabels, numericX: numericX && xs.length === list.length };
+  return {
+    labels,
+    values,
+    sizes,
+    xs,
+    hasLabels,
+    hasSizes,
+    numericX: numericX && xs.length === list.length
+  };
 }
 
 function seriesFrom(entry, index) {
@@ -97,7 +121,12 @@ export function normalizeData(input) {
     return {
       labels: read.labels,
       xValues: read.numericX && read.hasLabels ? read.xs : null,
-      series: [{ name: 'Series 1', color: undefined, values: read.values }]
+      series: [
+        withExtras({ name: 'Series 1', color: undefined, values: read.values }, {
+          sizes: read.hasSizes ? read.sizes : null,
+          xs: read.numericX && read.hasLabels ? read.xs : null
+        })
+      ]
     };
   }
 
@@ -125,11 +154,11 @@ export function normalizeData(input) {
     return {
       labels,
       xValues,
-      series: parsed.map((s) => ({
-        name: s.name,
-        color: s.color,
-        values: padTo(s.read.values, width)
-      }))
+      series: parsed.map((s) =>
+        withExtras({ name: s.name, color: s.color, values: padTo(s.read.values, width) }, {
+          sizes: s.read.hasSizes ? padTo(s.read.sizes, width) : null,
+          xs: s.read.numericX && s.read.hasLabels ? padTo(s.read.xs, width) : null
+        }))
     };
   }
 
@@ -143,7 +172,12 @@ export function normalizeData(input) {
     return {
       labels: labels.slice(0, values.length),
       xValues: Array.isArray(input.xValues) ? input.xValues.map(toValue) : null,
-      series: [{ name: input.name ? String(input.name) : 'Series 1', color: input.color, values }]
+      series: [
+        withExtras({ name: input.name ? String(input.name) : 'Series 1', color: input.color, values }, {
+          sizes: Array.isArray(input.sizes) ? padTo(input.sizes.map(toValue), values.length) : null,
+          xs: Array.isArray(input.xValues) ? padTo(input.xValues.map(toValue), values.length) : null
+        })
+      ]
     };
   }
 
@@ -158,6 +192,23 @@ export function normalizeData(input) {
   }
 
   return empty;
+}
+
+/**
+ * `sizes` is the bubble chart's third dimension, and `xs` a series' own numeric
+ * x positions. Both are attached only when the input actually carried them, so
+ * every other input shape — and every other chart type — sees exactly the
+ * object it saw before.
+ *
+ * The top-level `xValues` can only describe one x per index, which is right for
+ * a line chart (series share a category axis) and wrong for a scatter, where
+ * two series genuinely sit at different x. Keeping each series' own array
+ * alongside lets the bubble chart plot them where they really are.
+ */
+function withExtras(series, extras) {
+  if (extras.sizes) series.sizes = extras.sizes;
+  if (extras.xs) series.xs = extras.xs;
+  return series;
 }
 
 function padTo(values, width) {

@@ -109,6 +109,15 @@ export function drawAxis(ctx, spec, options) {
     ctx.stroke();
   }
 
+  // Everything past this point is axis furniture, not grid. `showGrid` and
+  // `showAxis` are independent switches: with the axis off, the grid alone
+  // still has to draw — and the baseline, ticks and titles must not, or the
+  // padding measured for a chart without labels gets labels drawn into it.
+  if (!options.showAxis) {
+    ctx.restore();
+    return;
+  }
+
   // ---- baseline ----------------------------------------------------------
   ctx.strokeStyle = axis.color;
   ctx.beginPath();
@@ -172,7 +181,7 @@ export function drawAxis(ctx, spec, options) {
 /** Vertical hover guide behind the tooltip. */
 export function drawHoverGuide(ctx, spec, pos, options) {
   ctx.save();
-  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctx.strokeStyle = options.axis.crosshairColor;
   ctx.lineWidth = 1;
   ctx.setLineDash([3, 4]);
   ctx.beginPath();

@@ -57,6 +57,10 @@ export class CartesianChart extends Chart {
 
     const catRange = this.horizontal ? [plot.y, plot.y + plot.h] : [plot.x, plot.x + plot.w];
     this.catScale = this.createCategoryScale(this.data.labels.length, catRange);
+
+    // The axis spec is a pure function of the geometry just computed, so it is
+    // rebuilt here and nowhere else. See `drawBackdrop`.
+    this.spec = null;
   }
 
   createCategoryScale(count, range) {
@@ -97,9 +101,16 @@ export class CartesianChart extends Chart {
     };
   }
 
+  /**
+   * The spec is cached across frames. Building it formats every tick label and
+   * measures every category string against the canvas font — `measureText` is
+   * one of the slower Canvas2D calls, and none of its inputs change between
+   * layouts. This used to run eight measurements a frame, sixty times a second,
+   * for a result that was identical every time.
+   */
   drawBackdrop(ctx) {
     if (!this.options.showAxis && !this.options.showGrid) return;
-    this.spec = this.axisSpec();
+    if (!this.spec) this.spec = this.axisSpec();
     drawAxis(ctx, this.spec, this.options);
   }
 
