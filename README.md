@@ -6,7 +6,7 @@
        width="640">
 </p>
 
-Data visualisation made of particles. Line, area, bar, pie and donut charts
+Data visualization made of particles. Line, area, bar, pie and donut charts
 rendered as living clouds of light on a `<canvas>`, driven by plain JSON.
 
 Zero runtime dependencies. One file — **20 kB minified + gzipped**. Responsive,
@@ -79,7 +79,7 @@ changes.
 
 ## Data
 
-Everything is normalised into `{ labels, series }`, so all of these work:
+Everything is normalized into `{ labels, series }`, so all of these work:
 
 ```js
 data: [4, 8, 15, 16, 23, 42]                              // bare numbers
@@ -99,7 +99,7 @@ data: { series: [{ name: 'Teams', data: [{ x: 12, y: 34, r: 18 }] }] }  // bubbl
 
 `null`, `undefined` and unparseable values become gaps: a line breaks at them,
 a bar is simply not drawn, and a radar polygon skips the spoke rather than
-pinning it to the centre.
+pinning it to the center.
 
 When every x value is numeric, line and bubble charts switch to a continuous x
 axis automatically. Otherwise the labels are treated as categories.
@@ -137,7 +137,7 @@ mark takes the mid radius and you get a plain scatter.
 | `bar` | Grouped by default; `stacked: true` and `horizontal: true` available. |
 | `bubble` | Scatter with a third value in the mark size. Aliased as `scatter`. |
 | `radar` | One spoke per label, one closed polygon per series. Aliased as `spider`. |
-| `pie` | Reads the first series; each category gets its own colour slot. |
+| `pie` | Reads the first series; each category gets its own color slot. |
 | `donut` | `pie` with `innerRadius: 0.62` and a running total in the hole. |
 
 ---
@@ -168,7 +168,7 @@ same thing, and the nested form wins if you write both.
 
 | Option | Default | Description |
 |---|---|---|
-| `particleColor` | palette | A colour, an array of colours, or `fn(index, series)`. |
+| `particleColor` | palette | A color, an array of colors, or `fn(index, series)`. |
 | `particleSize` | `0.8` | Particle radius in CSS pixels. At or below 1.6 particles are drawn as pixel-snapped rects — crisp, and much cheaper than sprites. |
 | `particleSizeJitter` | `0` | 0–1 random size spread. `0` keeps every particle identical. |
 | `particleDensity` | `15` | Multiplier on the auto-computed budget. |
@@ -187,17 +187,17 @@ not the target.
 
 Particles composite with `lighter`, so overlapping ones brighten each other.
 That is what produces the glow, but stack enough of them and every channel
-clips at 255 and the colour turns white. Two things follow:
+clips at 255 and the color turns white. Two things follow:
 
 - **`particleOpacity` defaults to 0.7**, not 1, to leave headroom.
 - **Line strokes are capped by area.** A stroke is a 3px band, so a large
   budget would pile particles a dozen deep inside it and the series would lose
-  its colour. Each stroke takes only the particles its own area can carry; on an
+  its color. Each stroke takes only the particles its own area can carry; on an
   area chart the surplus goes to the fill, and on a plain line chart it is
   simply not spent.
 
-If you pick your own colours, prefer ones with **at least one channel well below
-255** (`#2ff0d6` keeps its red at 47, so it stays cyan under stacking). A colour
+If you pick your own colors, prefer ones with **at least one channel well below
+255** (`#2ff0d6` keeps its red at 47, so it stays cyan under stacking). A color
 whose channels are all high — a pastel or a light violet — will wash out to
 white wherever the chart is dense.
 
@@ -210,25 +210,25 @@ white wherever the chart is dense.
 | `showLegend` | `true` | Rendered only when there is more than one series or slice. |
 | `showTooltip` | `true` | Hover tooltip and crosshair. |
 | `showValues` | `false` | Print values next to the marks. |
-| `legendPosition` | type-driven | `top`, `bottom`, `left`, `right`. Defaults to `bottom` where colour keys a series (line, area, bar, bubble, radar) and `top` for pie and donut. |
+| `legendPosition` | type-driven | `top`, `bottom`, `left`, `right`. Defaults to `bottom` where color keys a series (line, area, bar, bubble, radar) and `top` for pie and donut. |
 | `legendAlign` | type-driven | `start`, `center`, `end`. Follows `legendPosition`: `center` under the plot, `start` otherwise. |
 | `min` / `max` | auto | Pin the value axis. |
 | `beginAtZero` | `true` | Pull the value domain to include zero. |
 | `ticks` | `5` | Approximate tick count; nice-number rounding picks the real one. |
 | `valueFormat` | compact | `fn(value) → string` for ticks, labels and tooltips. |
 | `xTitle` / `yTitle` | `''` | Axis titles. |
-| `theme` | `'dark'` | `dark` or `light`. Sets the chrome colours below in one go; anything you set explicitly still wins. |
-| `axisColor` | `rgba(255,255,255,0.2)` | Colour of the axis lines. |
-| `gridColor` | `rgba(255,255,255,0.1)` | Colour of the grid lines behind the plot. |
-| `textColor` | `rgba(255,255,255,0.6)` | Colour of the tick labels and axis titles. |
-| `crosshairColor` | `rgba(255,255,255,0.22)` | Colour of the hover crosshair. |
+| `theme` | `'dark'` | `dark` or `light`. Sets the chrome colors below in one go; anything you set explicitly still wins. |
+| `axisColor` | `rgba(255,255,255,0.2)` | Color of the axis lines. |
+| `gridColor` | `rgba(255,255,255,0.1)` | Color of the grid lines behind the plot. |
+| `textColor` | `rgba(255,255,255,0.6)` | Color of the tick labels and axis titles. |
+| `crosshairColor` | `rgba(255,255,255,0.22)` | Color of the hover crosshair. |
 | `fontFamily` / `fontSize` | system sans / `11` | Typeface and size for axis labels. |
 | `tooltip.format` | — | `fn({ title, entries }) → HTML string`. |
 
 #### Light mode
 
 The chrome — axis, grid, labels, crosshair, legend and tooltip — defaults to a
-dark ground. `theme: 'light'` swaps it for dark grey on white:
+dark ground. `theme: 'light'` swaps it for dark gray on white:
 
 ```js
 new ParticleChart('#chart', { data, theme: 'light' });
@@ -240,9 +240,9 @@ media.addEventListener('change', sync);
 sync();
 ```
 
-Particle colours are never themed — the default palette is chosen to hold up on
+Particle colors are never themed — the default palette is chosen to hold up on
 either ground. If you pass your own neons, they will want darkening for a white
-page. Any chrome colour you set explicitly outranks the theme, and survives
+page. Any chrome color you set explicitly outranks the theme, and survives
 later `setOptions` calls; switching theme is the one thing that repaints them.
 The exact values are exported as `themes.dark` and `themes.light`.
 
@@ -268,7 +268,7 @@ On a light ground, trade it for opacity: `particleBloom: 0.15, particleOpacity: 
 | `bubble.edgeFade` | `0.35` | bubble — feathering of the rim, 0–1. |
 | `bubble.outline` | `false` | bubble — ring every bubble behind its cloud. The hovered one is ringed either way. |
 | `bubble.minValue` / `maxValue` | auto | bubble — pin the size domain instead of taking it from the data. |
-| `levels` | `4` | radar — web rings between the centre and the edge. |
+| `levels` | `4` | radar — web rings between the center and the edge. |
 | `webShape` | `'polygon'` | radar — `polygon` follows the spokes, `circle` draws true rings. |
 | `radar.width` | `2.6` | radar — thickness of each series' outline band. |
 | `radar.fill` | `true` | radar — fill the enclosed area with particles. |
@@ -300,10 +300,10 @@ as a morph rather than a redraw.
 
 ---
 
-## Colour
+## Color
 
 The default palette is a validated categorical set for dark surfaces — fixed
-slot order, chroma floor, and adjacent-pair colour-vision separation all checked
+slot order, chroma floor, and adjacent-pair color-vision separation all checked
 (worst adjacent CVD ΔE 8.4, normal-vision 19.3, contrast ≥ 3:1):
 
 ```
@@ -311,7 +311,7 @@ slot order, chroma floor, and adjacent-pair colour-vision separation all checked
 ```
 
 Slots are assigned in order and never shuffled, because the ordering *is* the
-safety mechanism. Past eight categories, colour stops being a reliable way to
+safety mechanism. Past eight categories, color stops being a reliable way to
 tell series apart — fold the tail into an "Other" series or use small multiples.
 The library warns once if you go past it.
 
@@ -319,7 +319,7 @@ The demo page deliberately overrides this with a neon teal (`#2ff0d6`), one
 violet (`#9085e9`) for second series, and a single-hue teal ramp for
 part-to-whole charts. That is a house style for that page, not a
 recommendation — a neon sits well above the lightness band a categorical set
-normally holds to. The pair still clears colour-vision separation (worst ΔE
+normally holds to. The pair still clears color-vision separation (worst ΔE
 23.7) and contrast (≥ 3:1), the pie slices are sorted by size so the ramp
 encodes magnitude, and every chart there also carries a legend, direct labels,
 or both.
@@ -331,7 +331,7 @@ or both.
 - Every chart renders a visually hidden data table for screen readers, and the
   canvas carries a descriptive `aria-label`.
 - A legend is always present for two or more series, so identity is never
-  carried by colour alone. Legend entries are real buttons — focusable, with
+  carried by color alone. Legend entries are real buttons — focusable, with
   `aria-pressed` — and clicking one mutes that series.
 - `prefers-reduced-motion: reduce` disables the entrance flight and the idle
   drift. The chart still draws; it just stops moving.
@@ -426,7 +426,7 @@ Want your project listed? Email **<blake@destinedstudio.com>**.
 Enjoying the library? Please consider
 [buying me a coffee](https://ko-fi.com/E1E6N4Q86) ☕
 
-## Licence
+## License
 
 MIT © [Blake Williford](https://blakewilliford.com) of
 [Destined Studio](https://destinedstudio.com).

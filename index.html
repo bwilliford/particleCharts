@@ -6,14 +6,14 @@
 <title>Particle Charts — JavaScript charts made of light</title>
 <meta name="description" content="A zero-dependency JavaScript charting library that renders bar, line, bubble, radar, pie and donut charts as living clouds of particles. 20 kB, responsive, accessible and typed.">
 <meta name="color-scheme" content="dark">
-<link rel="canonical" href="https://bwilliford.github.io/particleCharts/">
+<link rel="canonical" href="https://particlecharts.com/">
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Particle Charts">
-<meta property="og:url" content="https://bwilliford.github.io/particleCharts/">
+<meta property="og:url" content="https://particlecharts.com/">
 <meta property="og:title" content="Particle Charts — JavaScript charts made of light">
 <meta property="og:description" content="A zero-dependency JavaScript charting library that renders bar, line, bubble, radar, pie and donut charts as living clouds of particles.">
-<meta property="og:image" content="https://bwilliford.github.io/particleCharts/assets/demo.gif">
+<meta property="og:image" content="https://particlecharts.com/assets/demo.gif">
 <meta property="og:image:width" content="640">
 <meta property="og:image:height" content="400">
 <meta property="og:image:alt" content="A particle area chart morphing through three datasets, then reforming as a bar, donut and pie chart">
@@ -21,7 +21,23 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Particle Charts — JavaScript charts made of light">
 <meta name="twitter:description" content="A zero-dependency JavaScript charting library that renders bar, line, bubble, radar, pie and donut charts as living clouds of particles.">
-<meta name="twitter:image" content="https://bwilliford.github.io/particleCharts/assets/demo.gif">
+<meta name="twitter:image" content="https://particlecharts.com/assets/demo.gif">
+
+<!--
+  Declares the site name Google shows above a result. The pages used to live
+  under bwilliford.github.io/particleCharts/, where the domain root had no site
+  of its own and Google fell back to labeling them "GitHub Pages
+  documentation"; on particlecharts.com this pins the name explicitly.
+-->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Particle Charts",
+  "alternateName": "particle-charts",
+  "url": "https://particlecharts.com/"
+}
+</script>
 
 <script type="application/ld+json">
 {
@@ -30,14 +46,14 @@
   "name": "Particle Charts",
   "alternateName": "particle-charts",
   "description": "A zero-dependency JavaScript charting library that renders bar, line, bubble, radar, pie and donut charts as living clouds of particles on a canvas.",
-  "url": "https://bwilliford.github.io/particleCharts/",
+  "url": "https://particlecharts.com/",
   "codeRepository": "https://github.com/bwilliford/particleCharts",
   "programmingLanguage": "JavaScript",
   "runtimePlatform": "Web browser",
   "license": "https://opensource.org/licenses/MIT",
   "version": "1.0.0",
   "author": { "@type": "Person", "name": "Blake Williford", "url": "https://blakewilliford.com" },
-  "keywords": "particle chart, JavaScript chart library, canvas charts, data visualisation, bar chart, line chart, bubble chart, radar chart, pie chart, donut chart"
+  "keywords": "particle chart, JavaScript chart library, canvas charts, data visualization, bar chart, line chart, bubble chart, radar chart, pie chart, donut chart"
 }
 </script>
 <link rel="stylesheet" href="site/site.css">
@@ -91,7 +107,7 @@
   <!-- ------------------------------------------------------------ hero -- -->
   <div class="wrap hero">
     <p class="hero-kicker reveal">Charticles</p>
-    <h1 class="reveal">Charts made of light</h1>
+    <h1 class="reveal">Charts made of light particles</h1>
     <p class="lede reveal">
       A zero-dependency charting library that renders your data as a living cloud of particles.
       Bar, line, bubble, radar, pie and donut — responsive, accessible, and driven by plain JSON.
@@ -132,7 +148,7 @@
           <div class="card-chart" id="demo-line"></div>
         </div>
         <div class="card reveal">
-          <div class="card-head"><h3>Pie</h3><span class="card-note">part-to-whole, direct labelled</span></div>
+          <div class="card-head"><h3>Pie</h3><span class="card-note">part-to-whole, direct labeled</span></div>
           <code>type: 'pie'</code>
           <div class="card-chart" id="demo-pie"></div>
         </div>
@@ -287,7 +303,7 @@
         <div class="feature reveal">
           <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M8 3H6a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2 2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h2M16 3h2a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2 2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2"/></svg>
           <h3>Plain JSON in</h3>
-          <p>Arrays of numbers, <code>{label, value}</code> records, multi-series objects or <code>{x, y}</code> points — all normalised the same way.</p>
+          <p>Arrays of numbers, <code>{label, value}</code> records, multi-series objects or <code>{x, y}</code> points — all normalized the same way.</p>
         </div>
         <div class="feature reveal">
           <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/><circle cx="12" cy="12" r="3.5"/></svg>
@@ -315,25 +331,59 @@
     <div class="wrap">
       <div class="section-head reveal">
         <span class="eyebrow">Quick start</span>
-        <h2>Three lines to a chart.</h2>
-        <p>Drop in the script, point it at an element, hand it some JSON.</p>
+        <h2>Install it, then three lines to a chart.</h2>
+        <p>
+          One file, no dependencies, no build step required. Take it from a CDN
+          for a plain HTML page, or from npm if you have a bundler.
+        </p>
       </div>
 
       <div class="grid grid-2 reveal">
         <div>
-          <div class="code-head"><span class="dot"></span> index.html</div>
-          <pre class="code" data-code="html"></pre>
+          <div class="code-head"><span class="dot"></span> 1a — CDN, for a plain page</div>
+          <pre class="code" data-code="cdn"></pre>
+          <p class="code-note">
+            Defines the global <code>ParticleCharts</code>. unpkg serves the same
+            file — <code>https://unpkg.com/particle-charts@1/dist/particle-charts.min.js</code>.
+            Drop the <code>.min</code> for the readable build, and pin an exact
+            version (<code>@1.0.0</code>) in production rather than a range.
+          </p>
         </div>
         <div>
-          <div class="code-head"><span class="dot"></span> multi-series &amp; options</div>
-          <pre class="code" data-code="options"></pre>
+          <div class="code-head"><span class="dot"></span> 1b — npm, for a bundler</div>
+          <pre class="code" data-code="npm"></pre>
+          <p class="code-note">
+            Ships ES module source plus <code>index.d.ts</code>, so TypeScript
+            works with no <code>@types</code> package. <code>require('particle-charts')</code>
+            resolves to the CommonJS build. Node 18+.
+          </p>
         </div>
       </div>
 
-      <div class="grid grid-2 reveal" style="margin-top:20px">
+      <div class="grid grid-2 reveal" style="margin-top:32px">
         <div>
-          <div class="code-head"><span class="dot"></span> npm / bundler</div>
+          <div class="code-head"><span class="dot"></span> 2 — a chart, in full</div>
+          <pre class="code" data-code="html"></pre>
+          <p class="code-note">
+            The container needs a height. The chart fills it and re-lays out
+            whenever it changes.
+          </p>
+        </div>
+        <div>
+          <div class="code-head"><span class="dot"></span> 2 — the same, as a module</div>
           <pre class="code" data-code="esm"></pre>
+          <p class="code-note">
+            Every chart type has a shorthand: <code>line</code>, <code>area</code>,
+            <code>bar</code>, <code>bubble</code>, <code>radar</code>, <code>pie</code>,
+            <code>donut</code>.
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-2 reveal" style="margin-top:32px">
+        <div>
+          <div class="code-head"><span class="dot"></span> multi-series &amp; options</div>
+          <pre class="code" data-code="options"></pre>
         </div>
         <div>
           <div class="code-head"><span class="dot"></span> updating live</div>
@@ -373,7 +423,7 @@
             <tr><td>responsive</td><td>true</td><td>Re-layout on container resize.</td></tr>
 
             <tr class="group"><td colspan="3">Particles</td></tr>
-            <tr><td>particleColor</td><td>palette</td><td>A colour, an array of colours, or <code>fn(index, series)</code>.</td></tr>
+            <tr><td>particleColor</td><td>palette</td><td>A color, an array of colors, or <code>fn(index, series)</code>.</td></tr>
             <tr><td>particleSize</td><td>0.8</td><td>Base particle radius in CSS pixels.</td></tr>
             <tr><td>particleDensity</td><td>15</td><td>Multiplier on the auto-computed particle budget.</td></tr>
             <tr><td>particleCount</td><td>50000</td><td>Hard ceiling on particles, whatever the density.</td></tr>
@@ -389,13 +439,13 @@
             <tr><td>showLegend</td><td>true</td><td>Legend — rendered only when there is more than one series or slice.</td></tr>
             <tr><td>showTooltip</td><td>true</td><td>Hover tooltip and crosshair.</td></tr>
             <tr><td>showValues</td><td>false</td><td>Print values next to the marks.</td></tr>
-            <tr><td>legendPosition</td><td>per type</td><td><code>top</code>, <code>bottom</code>, <code>left</code>, <code>right</code>. Defaults to <code>bottom</code> where colour keys a series — line, area, bar, bubble, radar — and <code>top</code> for pie and donut.</td></tr>
+            <tr><td>legendPosition</td><td>per type</td><td><code>top</code>, <code>bottom</code>, <code>left</code>, <code>right</code>. Defaults to <code>bottom</code> where color keys a series — line, area, bar, bubble, radar — and <code>top</code> for pie and donut.</td></tr>
             <tr><td>legendAlign</td><td>per type</td><td><code>start</code>, <code>center</code>, <code>end</code>. <code>center</code> under the plot, <code>start</code> otherwise.</td></tr>
-            <tr><td>theme</td><td>'dark'</td><td><code>dark</code> or <code>light</code>. Sets the chrome colours below in one go — anything you set explicitly still wins. Particle colours are never themed.</td></tr>
-            <tr><td>axisColor</td><td>rgba(255,255,255,.2)</td><td>Colour of the axis lines.</td></tr>
-            <tr><td>gridColor</td><td>rgba(255,255,255,.1)</td><td>Colour of the grid lines behind the plot.</td></tr>
-            <tr><td>textColor</td><td>rgba(255,255,255,.6)</td><td>Colour of the tick labels and axis titles.</td></tr>
-            <tr><td>crosshairColor</td><td>rgba(255,255,255,.22)</td><td>Colour of the hover crosshair.</td></tr>
+            <tr><td>theme</td><td>'dark'</td><td><code>dark</code> or <code>light</code>. Sets the chrome colors below in one go — anything you set explicitly still wins. Particle colors are never themed.</td></tr>
+            <tr><td>axisColor</td><td>rgba(255,255,255,.2)</td><td>Color of the axis lines.</td></tr>
+            <tr><td>gridColor</td><td>rgba(255,255,255,.1)</td><td>Color of the grid lines behind the plot.</td></tr>
+            <tr><td>textColor</td><td>rgba(255,255,255,.6)</td><td>Color of the tick labels and axis titles.</td></tr>
+            <tr><td>crosshairColor</td><td>rgba(255,255,255,.22)</td><td>Color of the hover crosshair.</td></tr>
             <tr><td>fontFamily / fontSize</td><td>system sans / 11</td><td>Typeface and size for axis labels.</td></tr>
             <tr><td>min / max</td><td>auto</td><td>Pin the value axis instead of deriving it from the data.</td></tr>
             <tr><td>valueFormat</td><td>compact</td><td><code>fn(value) → string</code> for ticks, labels and tooltips.</td></tr>
@@ -408,7 +458,7 @@
             <tr><td>horizontal</td><td>false</td><td>Lay bars on their side.</td></tr>
             <tr><td>minRadius / maxRadius</td><td>5 / 30</td><td>Bubble radius range. Values map between the two by <em>area</em>, so twice the value covers twice the ink.</td></tr>
             <tr><td>bubble.edgeFade</td><td>0.35</td><td>Feathering of the bubble rim, 0–1.</td></tr>
-            <tr><td>levels</td><td>4</td><td>Radar web rings between the centre and the edge.</td></tr>
+            <tr><td>levels</td><td>4</td><td>Radar web rings between the center and the edge.</td></tr>
             <tr><td>webShape</td><td>'polygon'</td><td>Radar web: <code>polygon</code> follows the spokes, <code>circle</code> draws true rings.</td></tr>
             <tr><td>radar.fill / fillAmount</td><td>true / 0.55</td><td>Fill the enclosed area, and the share of particles it takes.</td></tr>
             <tr><td>innerRadius</td><td>0 / 0.62</td><td>Donut hole, as a fraction of the outer radius.</td></tr>

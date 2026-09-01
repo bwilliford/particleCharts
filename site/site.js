@@ -1,4 +1,4 @@
-/* Particle Charts — landing page behaviour.
+/* Particle Charts — landing page behavior.
    Everything here is a consumer of the public API; nothing reaches inside. */
 
 (function () {
@@ -15,7 +15,7 @@
     return;
   }
 
-  /* Two palettes, one per theme. Neon teal is the house colour and violet the
+  /* Two palettes, one per theme. Neon teal is the house color and violet the
      one other hue; the light set keeps both hues and simply drops them below
      the lightness band that white ground would swallow.
 
@@ -23,7 +23,7 @@
      (>= 3:1) on near-black — teal sits above the usual lightness band, which is
      the point of a neon. Every slice hue keeps one channel well below 255 so
      additive stacking brightens it without collapsing it to white. Ordering
-     validated for colour-vision separation (worst adjacent deltaE 16.0,
+     validated for color-vision separation (worst adjacent deltaE 16.0,
      normal-vision 23.6).
 
      Bloom is additive, and additive light on a white page is invisible — it
@@ -128,7 +128,7 @@
   var demoCharts = (window.demoCharts = []);
   function track(chart) { demoCharts.push(chart); return chart; }
 
-  /* Series colours live inside the data, so a theme change rebuilds these five
+  /* Series colors live inside the data, so a theme change rebuilds these five
      rather than restyling them — five constructors are cheaper than the
      plumbing, and the particles flying back into place sells the switch. */
   var demos = [];
@@ -218,7 +218,7 @@
 
   // --------------------------------------------------------- playground ----
 
-  /* Rebuilt per call rather than held as a constant: the series colours come
+  /* Rebuilt per call rather than held as a constant: the series colors come
      from the active palette, which the theme toggle can change underneath us. */
   function playData(type) {
     if (type === 'pie' || type === 'donut') return TRAFFIC;
@@ -247,8 +247,8 @@
 
   var play = null;
 
-  /* Pie and donut key colour to the *category*, so they take the slice palette
-     and a side legend. Every other type keys colour to the series, which the
+  /* Pie and donut key color to the *category*, so they take the slice palette
+     and a side legend. Every other type keys color to the series, which the
      data already carries. */
   function isRadial(type) {
     return type === 'pie' || type === 'donut';
@@ -270,9 +270,9 @@
       showGrid: state.grid,
       showLegend: state.legend,
       showValues: state.values,
-      // Radial charts key colour to the category, so their legend reads as a
+      // Radial charts key color to the category, so their legend reads as a
       // label list beside the ring. Everything else takes the type default,
-      // which is under the plot and centred.
+      // which is under the plot and centered.
       legendPosition: radial ? 'right' : undefined,
       padAngle: 3,
       // Radar reads as a share of a fixed ceiling, not of whatever it happens
@@ -366,9 +366,19 @@
 
   // ------------------------------------------------------ code samples ----
 
+  var CDN = 'https://cdn.jsdelivr.net/npm/particle-charts@1/dist/particle-charts.min.js';
+
   var SAMPLES = {
+    cdn: [
+      '<script src="' + CDN + '"><\/script>'
+    ].join('\n'),
+
+    npm: [
+      'npm install particle-charts'
+    ].join('\n'),
+
     html: [
-      '<script src="particle-charts.js"><\/script>',
+      '<script src="' + CDN + '"><\/script>',
       '',
       '<div id="chart" style="height: 320px"><\/div>',
       '',
@@ -399,7 +409,6 @@
     ].join('\n'),
 
     esm: [
-      '// npm install particle-charts',
       'import { ParticleChart, donut } from \'particle-charts\';',
       '',
       'const chart = new ParticleChart(el, {',
@@ -437,19 +446,22 @@
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
 
+    /* The `//` of a comment must be at a line start or follow whitespace —
+       otherwise the `//` in a CDN URL swallows the rest of the line. The lead
+       character is captured so it can be put back outside the span. */
     var RE = new RegExp(
       [
-        '(\\/\\/[^\\n]*)',
+        '(^|\\s)(\\/\\/[^\\n]*)',
         "('(?:[^'\\\\\\n]|\\\\.)*')",
         '(&lt;\\/?[a-zA-Z][\\w-]*)',
         '\\b(const|let|var|new|import|from|function|return|export|default|async|await|true|false|null)\\b',
         '\\b(\\d+(?:\\.\\d+)?)\\b'
       ].join('|'),
-      'g'
+      'gm'
     );
 
-    return escaped.replace(RE, function (match, comment, string, tag, keyword, number) {
-      if (comment) return '<span class="c">' + comment + '</span>';
+    return escaped.replace(RE, function (match, lead, comment, string, tag, keyword, number) {
+      if (comment) return lead + '<span class="c">' + comment + '</span>';
       if (string) return '<span class="s">' + string + '</span>';
       if (tag) return '<span class="k">' + tag + '</span>';
       if (keyword) return '<span class="k">' + keyword + '</span>';

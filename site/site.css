@@ -379,6 +379,20 @@ pre.code .f { color: var(--code-f); }
 }
 .code-head .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--line-strong); }
 
+/* Prose under a code block — the caveats that do not belong inside the sample. */
+.code-note {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-3);
+  margin: 12px 4px 0;
+}
+.code-note code {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  /* Long CDN URLs must wrap rather than push the column past the viewport. */
+  overflow-wrap: anywhere;
+}
+
 /* ---------------------------------------------------------- showcase --- */
 
 .shot {
