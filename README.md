@@ -1,16 +1,22 @@
 # Particle Charts
 
+[![npm](https://img.shields.io/npm/v/particle-charts.svg)](https://www.npmjs.com/package/particle-charts)
+[![gzipped](https://img.shields.io/badge/gzipped-21%20kB-blue)](https://cdn.jsdelivr.net/npm/particle-charts@1/dist/particle-charts.min.js)
+[![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](package.json)
+[![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/bwilliford/particleCharts/main/assets/demo.gif"
        alt="A particle area chart morphing through three datasets, then reforming as a bar, donut and pie chart"
        width="640">
 </p>
 
-Data visualization made of particles. Line, area, bar, pie and donut charts
-rendered as living clouds of light on a `<canvas>`, driven by plain JSON.
+Data visualization made of particles. Line, area, bar, bubble, radar, pie and
+donut charts rendered as living clouds of light on a `<canvas>`, driven by
+plain JSON.
 
-Zero runtime dependencies. One file — **20 kB minified + gzipped**. Responsive,
-accessible and typed.
+Zero runtime dependencies. One file — **21 kB minified + gzipped**. Responsive,
+themeable, accessible and typed.
 
 ```js
 new ParticleChart('#chart', {
@@ -19,9 +25,11 @@ new ParticleChart('#chart', {
 });
 ```
 
-**[Live demo →](https://bwilliford.github.io/particleCharts/)** · or open
-`index.html` from a clone, or `npm start` to serve it on
-<http://localhost:4173>.
+**[Live demo →](https://particlecharts.com)** · or open `index.html` from a
+clone, or `npm start` to serve it on <http://localhost:4173>.
+
+**v1.0.0** — the option names, the data shapes and the method signatures below
+are the stable surface. Anything that changes them from here gets a major.
 
 ---
 
@@ -41,11 +49,13 @@ new ParticleChart('#chart', {
 </script>
 ```
 
-unpkg works the same way: `https://unpkg.com/particle-charts@1/dist/particle-charts.min.js`.
-Drop the `.min` for the readable build. Pin an exact version (`@1.0.0`) in
+The script defines a single global, `ParticleCharts`. unpkg serves the same
+file: `https://unpkg.com/particle-charts@1/dist/particle-charts.min.js`. Drop
+the `.min` for the readable build. Pin an exact version (`@1.0.0`) in
 production rather than a range.
 
-**npm** — ES module source is shipped as-is, with TypeScript declarations:
+**npm** — ES module source is shipped as-is, with TypeScript declarations, so
+there is no `@types` package to install:
 
 ```bash
 npm install particle-charts
@@ -58,7 +68,7 @@ const chart = new ParticleChart(element, { type: 'donut', data });
 donut(element, { Direct: 4820, Search: 3140 }); // shorthand
 ```
 
-CommonJS resolves to the UMD build, so `require` works too:
+CommonJS resolves to the UMD build, so `require` works too (Node 18+):
 
 ```js
 const { ParticleChart } = require('particle-charts');
@@ -66,9 +76,10 @@ const { ParticleChart } = require('particle-charts');
 
 | File | Use |
 |---|---|
-| `dist/particle-charts.min.js` | CDN / `<script>` — 20 kB gzipped |
+| `dist/particle-charts.min.js` | CDN / `<script>` — 21 kB gzipped, defines `window.ParticleCharts` |
 | `dist/particle-charts.js` | same, unminified, for debugging |
 | `dist/particle-charts.cjs` | `require()` |
+| `dist/particle-charts.esm.js` | `<script type="module">` straight from a clone; re-exports `src/` |
 | `src/index.js` | `import` — what bundlers get |
 | `index.d.ts` | TypeScript |
 
@@ -96,6 +107,11 @@ data: {                                                    // multi-series
 data: { series: [{ name: 'Load', data: [{ x: 0, y: 12 }, { x: 5, y: 19 }] }] }
 data: { series: [{ name: 'Teams', data: [{ x: 12, y: 34, r: 18 }] }] }  // bubble
 ```
+
+A point object is read by any of the usual keys — `label`, `name`, `x`, `key`,
+`category` or `date` for the category, and `value`, `y`, `count`, `total` or
+`amount` for the number. A series can be given as `data`, `values` or `points`,
+and the series list as `series` or `datasets`.
 
 `null`, `undefined` and unparseable values become gaps: a line breaks at them,
 a bar is simply not drawn, and a radar polygon skips the spoke rather than
@@ -130,33 +146,35 @@ mark takes the mid radius and you get a plain scatter.
 
 ## Chart types
 
-| `type` | Notes |
-|---|---|
-| `line` | Monotone-cubic smoothing by default; never overshoots the data. |
-| `area` | The same chart with the fill under the curve turned on. |
-| `bar` | Grouped by default; `stacked: true` and `horizontal: true` available. |
-| `bubble` | Scatter with a third value in the mark size. Aliased as `scatter`. |
-| `radar` | One spoke per label, one closed polygon per series. Aliased as `spider`. |
-| `pie` | Reads the first series; each category gets its own color slot. |
-| `donut` | `pie` with `innerRadius: 0.62` and a running total in the hole. |
+| `type` | Aliases | Notes |
+|---|---|---|
+| `line` | — | Monotone-cubic smoothing by default; never overshoots the data. |
+| `area` | — | The same chart with the fill under the curve turned on. |
+| `bar` | `column` | Grouped by default; `stacked: true` and `horizontal: true` available. |
+| `bubble` | `scatter` | Scatter with a third value in the mark size. |
+| `radar` | `spider` | One spoke per label, one closed polygon per series. |
+| `pie` | — | Reads the first series; each category gets its own color slot. |
+| `donut` | — | `pie` with `innerRadius: 0.62` and a running total in the hole. |
 
 ---
 
 ## Options
 
-Nested groups (`particle`, `axis`, `legend`, `line`, `bar`, `bubble`, `radar`,
-`pie`) can be set
-either way — `{ particleBloom: 0.8 }` and `{ particle: { bloom: 0.8 } }` are the
-same thing, and the nested form wins if you write both.
+Nested groups (`particle`, `axis`, `legend`, `tooltip`, `line`, `bar`,
+`bubble`, `radar`, `pie`) can be set either way where a flat alias exists —
+`{ particleBloom: 0.8 }` and `{ particle: { bloom: 0.8 } }` are the same thing,
+and the nested form wins if you write both. Options listed below in dotted form
+(`bar.fade`) have no alias and are set on the group.
 
 ### Core
 
 | Option | Default | Description |
 |---|---|---|
-| `type` | `'line'` | `line`, `area`, `bar`, `pie`, `donut`. |
-| `data` | — | See above. |
+| `type` | `'line'` | `line`, `area`, `bar`, `bubble`, `radar`, `pie`, `donut`. |
+| `data` | — | See above. The one option that is not optional. |
+| `theme` | `'dark'` | `dark` or `light`. See [Theming](#theming). |
 | `background` | `'transparent'` | Canvas fill painted behind the particles. |
-| `padding` | auto | Number, `[y, x]`, or `{top, right, bottom, left}`. Left alone, it is measured from the axis labels actually drawn. |
+| `padding` | auto | Number, `[y, x]`, `[top, right, bottom, left]`, or `{top, right, bottom, left}`. Left alone, it is measured from the axis labels actually drawn. |
 | `responsive` | `true` | Re-layout on container resize. |
 | `maxDpr` | `2` | Cap on the HiDPI backing store. |
 | `pauseWhenHidden` | `true` | Stop the loop when the tab hides or the chart scrolls out of view. |
@@ -169,18 +187,22 @@ same thing, and the nested form wins if you write both.
 | Option | Default | Description |
 |---|---|---|
 | `particleColor` | palette | A color, an array of colors, or `fn(index, series)`. |
-| `particleSize` | `0.8` | Particle radius in CSS pixels. At or below 1.6 particles are drawn as pixel-snapped rects — crisp, and much cheaper than sprites. |
-| `particleSizeJitter` | `0` | 0–1 random size spread. `0` keeps every particle identical. |
+| `particleSize` | `0.8` | Particle radius in CSS pixels. At or below 1.6 a particle is drawn as a pixel-snapped disc rather than a glow sprite — crisp, and about ten times cheaper per mark. |
+| `particle.sizeJitter` | `0` | 0–1 random size spread. `0` keeps every particle identical. |
 | `particleDensity` | `15` | Multiplier on the auto-computed budget. |
 | `particleCount` | `50000` | Hard ceiling, whatever the density. |
 | `particleBloom` | `0.8` | Additive glow strength, 0–1. |
+| `particle.bloomRadius` | `14` | Blur radius of the bloom pass, in CSS pixels. |
 | `particleOpacity` | `0.7` | Global particle alpha. Kept under 1 so additive stacking does not clip hues to white. |
-| `particleJitter` | `1` | Idle drift amplitude in pixels. |
-| `particleSpeed` | `0.085` | Spring stiffness toward the target. |
-| `particleShape` | `'soft'` | Particles are circles; `soft` adds a glow sprite once they are large enough for the halo to read. `square` forces rectangles. |
+| `particleJitter` | `1` | Idle drift amplitude in pixels. `0` lets a settled chart stop drawing entirely. |
+| `particle.jitterSpeed` | `1` | Idle drift speed. |
+| `particleSpeed` | `0.085` | Spring stiffness toward the target, 0–1. |
+| `particle.damping` | `0.78` | Velocity damping on that spring. |
+| `particleShape` | `'soft'` | `soft` adds a glow sprite once particles are large enough for the halo to read, `dot` keeps them bare, `square` forces rectangles. |
 
 The particle count is derived from the plot area, the density and the size —
-smaller particles are issued in greater numbers. `particleCount` is the ceiling,
+smaller particles are issued in greater numbers, and area counts sub-linearly so
+a wide chart does not cost proportionally more. `particleCount` is the ceiling,
 not the target.
 
 ### A note on additive blending
@@ -201,53 +223,36 @@ If you pick your own colors, prefer ones with **at least one channel well below
 whose channels are all high — a pastel or a light violet — will wash out to
 white wherever the chart is dense.
 
-### Axis, legend, tooltip
+### Axis and grid
 
 | Option | Default | Description |
 |---|---|---|
 | `showAxis` | `true` | Axis lines and tick labels. |
-| `showGrid` | `true` | Grid lines. |
+| `showGrid` | `true` | Master switch for grid lines. |
+| `axis.grid` | `true` | Value-axis grid lines. |
+| `axis.xGrid` | `false` | Category-axis grid lines. On by default for `bubble`. |
+| `axis.xLabels` / `axis.yLabels` | `true` | Tick labels per axis. |
+| `min` / `max` | `null` | Pin the value axis. |
+| `beginAtZero` | `true` | Pull the value domain to include zero. `false` by default for `bubble`. |
+| `ticks` | `5` | Approximate tick count; nice-number rounding picks the real one. |
+| `valueFormat` | compact | `fn(value) → string` for ticks, labels and tooltips. The default abbreviates with SI suffixes (`1.2k`, `3.4M`). |
+| `xTitle` / `yTitle` | `''` | Axis titles. |
+| `fontFamily` | system sans | Typeface for axis labels. |
+| `axis.fontSize` | `11` | Size for axis labels. |
+
+### Legend, tooltip, values
+
+| Option | Default | Description |
+|---|---|---|
 | `showLegend` | `true` | Rendered only when there is more than one series or slice. |
-| `showTooltip` | `true` | Hover tooltip and crosshair. |
-| `showValues` | `false` | Print values next to the marks. |
 | `legendPosition` | type-driven | `top`, `bottom`, `left`, `right`. Defaults to `bottom` where color keys a series (line, area, bar, bubble, radar) and `top` for pie and donut. |
 | `legendAlign` | type-driven | `start`, `center`, `end`. Follows `legendPosition`: `center` under the plot, `start` otherwise. |
-| `min` / `max` | auto | Pin the value axis. |
-| `beginAtZero` | `true` | Pull the value domain to include zero. |
-| `ticks` | `5` | Approximate tick count; nice-number rounding picks the real one. |
-| `valueFormat` | compact | `fn(value) → string` for ticks, labels and tooltips. |
-| `xTitle` / `yTitle` | `''` | Axis titles. |
-| `theme` | `'dark'` | `dark` or `light`. Sets the chrome colors below in one go; anything you set explicitly still wins. |
-| `axisColor` | `rgba(255,255,255,0.2)` | Color of the axis lines. |
-| `gridColor` | `rgba(255,255,255,0.1)` | Color of the grid lines behind the plot. |
-| `textColor` | `rgba(255,255,255,0.6)` | Color of the tick labels and axis titles. |
-| `crosshairColor` | `rgba(255,255,255,0.22)` | Color of the hover crosshair. |
-| `fontFamily` / `fontSize` | system sans / `11` | Typeface and size for axis labels. |
-| `tooltip.format` | — | `fn({ title, entries }) → HTML string`. |
-
-#### Light mode
-
-The chrome — axis, grid, labels, crosshair, legend and tooltip — defaults to a
-dark ground. `theme: 'light'` swaps it for dark gray on white:
-
-```js
-new ParticleChart('#chart', { data, theme: 'light' });
-
-// or follow the reader's OS setting, and keep following it
-const media = matchMedia('(prefers-color-scheme: light)');
-const sync = () => chart.setOptions({ theme: media.matches ? 'light' : 'dark' });
-media.addEventListener('change', sync);
-sync();
-```
-
-Particle colors are never themed — the default palette is chosen to hold up on
-either ground. If you pass your own neons, they will want darkening for a white
-page. Any chrome color you set explicitly outranks the theme, and survives
-later `setOptions` calls; switching theme is the one thing that repaints them.
-The exact values are exported as `themes.dark` and `themes.light`.
-
-Bloom is additive, and additive light on a white page only washes the hue out.
-On a light ground, trade it for opacity: `particleBloom: 0.15, particleOpacity: 0.9`.
+| `legend.interactive` | `true` | Click or key a legend entry to mute that series. |
+| `legend.markerSize` | `8` | Swatch diameter, px. |
+| `legend.fontSize` | `12` | Legend text size, px. |
+| `showTooltip` | `true` | Hover tooltip and crosshair. |
+| `tooltip.format` | `null` | `fn(payload) → HTML string`, where payload is `{ title, entries: [{ name, value, color }], x, y }`. |
+| `showValues` | `false` | Print values next to the marks. |
 
 ### Per type
 
@@ -256,29 +261,106 @@ On a light ground, trade it for opacity: `particleBloom: 0.15, particleOpacity: 
 | `curve` | `'smooth'` | line — `smooth`, `linear`, `step`. |
 | `fillArea` | `false` | line — `type: 'area'` turns it on. |
 | `lineWidth` | `3.2` | line — thickness of the particle band forming the stroke. |
-| `line.areaAmount` | `0.55` | line — share of particles spent on the fill, plus whatever the stroke cap frees up. |
+| `line.areaAmount` | `0.55` | line — share of particles spent on the fill, plus whatever the stroke cap frees up. `0.7` for `type: 'area'`. |
+| `line.areaFade` | `0.9` | line — how much the fill thins toward the baseline. |
 | `showPoints` | `true` | line — particle clusters at each data point. |
+| `line.pointRadius` | `4.5` | line — radius of those clusters. |
 | `stacked` | `false` | bar |
 | `horizontal` | `false` | bar |
 | `barPadding` | `0.3` | bar — gap between categories, 0–1 of the band. |
+| `bar.groupPadding` | `0.16` | bar — gap between bars inside a group, 0–1 of the slot. |
 | `bar.fade` | `0.45` | bar — how much the fill thins toward the growing end. |
 | `bar.radius` | `4` | bar — rounded cap radius. |
 | `minRadius` | `5` | bubble — smallest bubble radius in pixels. |
 | `maxRadius` | `30` | bubble — largest bubble radius. Values map between the two by **area**. |
 | `bubble.edgeFade` | `0.35` | bubble — feathering of the rim, 0–1. |
 | `bubble.outline` | `false` | bubble — ring every bubble behind its cloud. The hovered one is ringed either way. |
-| `bubble.minValue` / `maxValue` | auto | bubble — pin the size domain instead of taking it from the data. |
+| `bubble.minValue` / `maxValue` | `null` | bubble — pin the size domain instead of taking it from the data. |
 | `levels` | `4` | radar — web rings between the center and the edge. |
 | `webShape` | `'polygon'` | radar — `polygon` follows the spokes, `circle` draws true rings. |
 | `radar.width` | `2.6` | radar — thickness of each series' outline band. |
 | `radar.fill` | `true` | radar — fill the enclosed area with particles. |
 | `radar.fillAmount` | `0.55` | radar — share of particles spent on the fill. |
+| `radar.fillFade` | `0.55` | radar — how much the fill thins toward the center. |
+| `radar.points` / `pointRadius` | `true` / `4` | radar — particle clusters at each vertex. |
 | `radar.startAngle` | `-90` | radar — degrees; `-90` puts the first spoke straight up. |
 | `innerRadius` | `0` / `0.62` | pie / donut — hole size as a fraction of the outer radius. |
 | `startAngle` | `-90` | pie — degrees; 0 is 3 o'clock. |
 | `padAngle` | `1.2` | pie — gap between slices, in degrees. |
+| `pie.radius` | `0.95` | pie — shrink factor against the space left once labels are placed. |
+| `pie.edgeFade` | `0.25` | pie — feathering of the outer edge, 0–1. |
 | `pie.labels` | `'percent'` | pie — `percent`, `value`, `label`, `none`. Shown when `showValues` is on. |
-| `pie.center` | `'auto'` | pie — `total` in the donut hole, or `none`. |
+| `pie.center` | `'auto'` | pie — `total` in the donut hole, or `none`. `auto` means a total when there is a hole to put it in. |
+
+### Defaults that depend on the type
+
+A few defaults are decided by `type` at construction, and only when you have not
+set them yourself:
+
+| Type | What changes |
+|---|---|
+| `area` | `line.area: true`, `line.areaAmount: 0.7`. |
+| `donut` | `pie.innerRadius: 0.62`. |
+| line, area, bar, bubble, radar | Legend moves to `bottom`, `center` — color keys a series there, so the legend reads after the plot. |
+| pie, donut | Legend stays `top`, `start` — color keys a category, so it reads more like a label list. |
+| `bubble` | `beginAtZero: false` and `axis.xGrid: true`. A cloud is read by position, not height: a zero baseline strands it in a corner, and vertical-only gridlines give it nothing to line up against. |
+
+---
+
+## Theming
+
+Light and dark are one option. `theme` sets the **chrome** — axis lines, grid,
+tick labels, crosshair, legend text and the tooltip — in one go:
+
+```js
+new ParticleChart('#chart', { data, theme: 'light' });
+```
+
+| Token | `dark` (default) | `light` |
+|---|---|---|
+| `axisColor` | `rgba(255,255,255,0.2)` | `rgba(22,26,34,0.28)` |
+| `gridColor` | `rgba(255,255,255,0.1)` | `rgba(22,26,34,0.12)` |
+| `textColor` | `rgba(255,255,255,0.6)` | `rgba(22,26,34,0.62)` |
+| `crosshairColor` | `rgba(255,255,255,0.22)` | `rgba(22,26,34,0.3)` |
+| `legend.color` | `rgba(255,255,255,0.72)` | `rgba(22,26,34,0.78)` |
+| `tooltip.background` | `rgba(12,14,19,0.94)` | `rgba(255,255,255,0.96)` |
+| `tooltip.color` | `#e9edf3` | `#161a22` |
+| `tooltip.borderColor` | `rgba(255,255,255,0.12)` | `rgba(22,26,34,0.14)` |
+
+Both objects are exported as `themes.dark` and `themes.light` if you want to
+read or extend them.
+
+Any color you set explicitly outranks the theme, and survives later
+`setOptions` calls — switching theme is the one thing that repaints chrome you
+have already overridden, and colors passed in the *same* call as the theme
+still win:
+
+```js
+chart.setOptions({ theme: 'light', gridColor: 'rgba(0,0,0,0.06)' });
+```
+
+To follow the reader's OS setting, and keep following it:
+
+```js
+const media = matchMedia('(prefers-color-scheme: light)');
+const sync = () => chart.setOptions({ theme: media.matches ? 'light' : 'dark' });
+media.addEventListener('change', sync);
+sync();
+```
+
+Two things `theme` deliberately does not touch:
+
+- **Particle colors.** The default palette is chosen to hold up on either
+  ground. If you pass your own neons, they will want darkening for a white page.
+- **`background`.** The canvas stays transparent, so the chart sits on whatever
+  your page already is.
+
+Bloom is additive, and additive light on a white page only washes the hue out.
+On a light ground, trade it for opacity:
+
+```js
+chart.setOptions({ theme: 'light', particleBloom: 0.15, particleOpacity: 0.9 });
+```
 
 ---
 
@@ -296,7 +378,41 @@ chart.destroy();               // stop the loop, drop listeners, remove the DOM
 ```
 
 `update()` reuses the existing particles wherever it can, so a data change reads
-as a morph rather than a redraw.
+as a morph rather than a redraw. `destroy()` is idempotent.
+
+Readable properties: `chart.container`, `chart.root` (the element the library
+inserts), `chart.options` (fully resolved), `chart.data` (normalized to
+`{ labels, xValues, series }`), `chart.plot` (`{x, y, w, h}` of the plot area)
+and `chart.destroyed`.
+
+## Exports
+
+```js
+import {
+  ParticleChart,                              // the factory — works with or without `new`
+  line, area, bar, bubble, radar, pie, donut, // shorthands: fn(target, data, options)
+  Chart, LineChart, BarChart,                 // the classes, if you want to extend one
+  BubbleChart, PieChart, RadarChart,
+  defaults,                                   // the resolved default options object
+  palette,                                    // the built-in categorical palette, in slot order
+  themes,                                     // { dark, light } chrome palettes
+  version                                     // '1.0.0'
+} from 'particle-charts';
+```
+
+The same names hang off the `ParticleCharts` global from the CDN build.
+
+TypeScript declarations ship in the package; the option and data types are
+exported too, so you can build a config before you build a chart:
+
+```ts
+import { ParticleChart, type ChartOptions, type ChartData } from 'particle-charts';
+
+const options: ChartOptions = { type: 'bar', stacked: true, theme: 'light' };
+const data: ChartData = { labels: ['Q1', 'Q2'], values: [42, 58] };
+
+const chart = new ParticleChart('#chart', { ...options, data });
+```
 
 ---
 
@@ -314,6 +430,10 @@ Slots are assigned in order and never shuffled, because the ordering *is* the
 safety mechanism. Past eight categories, color stops being a reliable way to
 tell series apart — fold the tail into an "Other" series or use small multiples.
 The library warns once if you go past it.
+
+Per-series colors override the slot (`{ name: 'Revenue', color: '#3987e5' }`),
+and `particleColor` overrides the palette wholesale — as a single color, a list
+assigned by slot, or `fn(index, series)`.
 
 The demo page deliberately overrides this with a neon teal (`#2ff0d6`), one
 violet (`#9085e9`) for second series, and a single-hue teal ramp for
@@ -337,6 +457,15 @@ or both.
   drift. The chart still draws; it just stops moving.
 - Charts pause when the tab is hidden or they scroll out of view.
 
+## Styling hooks
+
+The library injects one small stylesheet, once, for the DOM parts — the legend
+and the tooltip. The class names are stable and yours to restyle:
+`.pchart-root`, `.pchart-plot`, `.pchart-canvas`, `.pchart-legend`,
+`.pchart-legend-item` (plus `.is-muted`), `.pchart-legend-marker`,
+`.pchart-tooltip` (plus `.is-visible`, `-title`, `-row`, `-swatch`, `-name`,
+`-value`) and `.pchart-a11y` for the screen-reader table.
+
 ---
 
 ## Development
@@ -344,15 +473,15 @@ or both.
 ```bash
 npm install       # devDependencies only — esbuild (minify) and typescript
 npm run build     # bundle src/ -> dist/ (.js, .cjs, .min.js, .esm.js)
-npm test          # 82 tests, headless, no browser required
+npm test          # 115 tests, headless, no browser required
 npm run typecheck # index.d.ts under --strict
 npm start         # build + serve the demo on :4173
 ```
 
 `dist/` is committed so the demo and the CDN work straight from a clone; CI
-fails the build if it drifts from `src/`. Releases go out by tag —
-`npm version minor && git push --follow-tags` — which runs the tests and
-publishes with npm provenance.
+fails the build if it drifts from `src/`, and runs the suite on Node 18, 20 and
+22. Releases go out by tag — `npm version minor && git push --follow-tags` —
+which runs the tests and publishes with npm provenance.
 
 `scripts/build.js` is a ~140-line bundler: it concatenates the ES modules in
 dependency order and wraps them in a UMD shell. It enforces the two rules that
@@ -403,7 +532,7 @@ addEventListener('scroll', () => {
 
 If a chart feels sparse or heavy, `particleDensity` is the one knob to turn — it
 scales the particle budget linearly, and the particle count is what the frame
-cost is made of. At the default of `15` a 600x320 plot is worth roughly 16k
+cost is made of. At the default of `15` a 600x320 plot is worth roughly 19k
 particles; at `5` it is roughly 6k, which still reads as a solid shape.
 
 ## Browser support
