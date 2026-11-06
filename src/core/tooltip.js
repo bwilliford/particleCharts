@@ -7,7 +7,9 @@ export class Tooltip {
   constructor(host, options) {
     this.el = document.createElement('div');
     this.el.className = 'pchart-tooltip';
-    this.el.setAttribute('role', 'tooltip');
+    /* Not `role="tooltip"`: it is pointer-only chrome with no accessible name,
+       and the same numbers are already exposed in the chart's data table. */
+    this.el.setAttribute('aria-hidden', 'true');
     host.appendChild(this.el);
     this.visible = false;
     this.applyTheme(options);

@@ -1,6 +1,6 @@
 /*!
  * Particle Charts v1.0.0 — data visualisation made of particles.
- * https://bwilliford.github.io/particleCharts/
+ * https://particlecharts.com/
  * MIT Licence.
  */
 (function (root, factory) {
@@ -1788,7 +1788,9 @@ class Legend {
     this.chart = chart;
     this.el = document.createElement('div');
     this.el.className = 'pchart-legend';
-    this.el.setAttribute('role', 'list');
+    /* The role is set in render(): an interactive legend is a group of toggle
+       buttons, a static one is a list, and `listitem` may not carry
+       `aria-pressed` — pairing them drops the mute state for assistive tech. */
     root.appendChild(this.el);
     this.items = [];
   }
@@ -1800,6 +1802,13 @@ class Legend {
     this.el.style.display = show ? '' : 'none';
     this.el.dataset.align = legend.align;
     this.el.dataset.interactive = String(!!legend.interactive);
+    if (legend.interactive) {
+      this.el.setAttribute('role', 'group');
+      this.el.setAttribute('aria-label', 'Toggle series');
+    } else {
+      this.el.setAttribute('role', 'list');
+      this.el.removeAttribute('aria-label');
+    }
     this.el.style.color = legend.color;
     this.el.style.fontSize = legend.fontSize + 'px';
     if (!show) {
@@ -1812,7 +1821,7 @@ class Legend {
     this.items = entries.map((entry) => {
       const item = document.createElement(legend.interactive ? 'button' : 'span');
       item.className = 'pchart-legend-item' + (entry.muted ? ' is-muted' : '');
-      item.setAttribute('role', 'listitem');
+      if (!legend.interactive) item.setAttribute('role', 'listitem');
       if (legend.interactive) {
         item.type = 'button';
         item.setAttribute('aria-pressed', String(!entry.muted));
@@ -1853,7 +1862,9 @@ class Tooltip {
   constructor(host, options) {
     this.el = document.createElement('div');
     this.el.className = 'pchart-tooltip';
-    this.el.setAttribute('role', 'tooltip');
+    /* Not `role="tooltip"`: it is pointer-only chrome with no accessible name,
+       and the same numbers are already exposed in the chart's data table. */
+    this.el.setAttribute('aria-hidden', 'true');
     host.appendChild(this.el);
     this.visible = false;
     this.applyTheme(options);

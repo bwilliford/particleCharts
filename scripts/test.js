@@ -958,6 +958,25 @@ test('toDataURL returns something PNG-shaped', () => {
   chart.destroy();
 });
 
+test('CSP script hashes match the inline scripts in index.html', async () => {
+  const crypto = await import('node:crypto');
+  const fs = await import('node:fs');
+  const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+
+  const csp = (html.match(/http-equiv="Content-Security-Policy"[\s\S]*?content="([\s\S]*?)"/) || [])[1];
+  assert(csp, 'index.html declares a Content-Security-Policy');
+  const declared = new Set((csp.match(/'sha256-[^']+'/g) || []).map((h) => h.slice(1, -1)));
+
+  const actual = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)]
+    .map((m) => 'sha256-' + crypto.createHash('sha256').update(m[1]).digest('base64'));
+
+  assert(actual.length > 0, 'found inline scripts to hash');
+  for (const h of actual) {
+    assert(declared.has(h), `inline script hash ${h} is not in the CSP — update the meta tag`);
+  }
+  eq(declared.size, actual.length, 'no stale hashes left in the CSP');
+});
+
 // ------------------------------------------------------------------ report ---
 
 const total = passed + failures.length;

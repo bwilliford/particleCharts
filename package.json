@@ -1,7 +1,7 @@
 {
   "name": "particle-charts",
   "version": "1.0.0",
-  "description": "Data visualisation made of particles — line, area, bar, pie and donut charts rendered as clouds of light. Zero dependencies.",
+  "description": "Data visualisation made of particles — bar, line, bubble, radar, pie and donut charts rendered as clouds of light. Zero dependencies.",
   "keywords": [
     "charts",
     "particles",
@@ -13,7 +13,7 @@
     "pie-chart",
     "donut-chart"
   ],
-  "homepage": "https://bwilliford.github.io/particleCharts/",
+  "homepage": "https://particlecharts.com/",
   "bugs": {
     "url": "https://github.com/bwilliford/particleCharts/issues"
   },

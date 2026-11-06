@@ -37,7 +37,9 @@ jobs:
           # assets/ carries the social-card image and the showcase shots, both
           # of which are referenced by index.html — without this they 404.
           cp -r assets _site/
-          cp sitemap.xml _site/
+          cp sitemap.xml robots.txt llms.txt _site/
+          # AGENTS.md is repo guidance, not a page, so it is deliberately not
+          # published here — agents read it from the repository.
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
