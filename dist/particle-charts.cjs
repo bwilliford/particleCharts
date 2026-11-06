@@ -1,5 +1,5 @@
 /*!
- * Particle Charts v1.0.0 — data visualisation made of particles.
+ * Particle Charts v1.0.1 — data visualisation made of particles.
  * https://particlecharts.com/
  * MIT Licence.
  */
@@ -4243,7 +4243,7 @@ class RadarChart extends Chart {
  */
 
 
-const version = '1.0.0';
+const version = '1.0.1';
 
 const TYPES = {
   line: LineChart,

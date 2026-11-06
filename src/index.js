@@ -11,7 +11,7 @@ import { RadarChart } from './charts/radar.js';
 import { DEFAULTS, THEMES } from './core/options.js';
 import { DEFAULT_PALETTE } from './core/color.js';
 
-export const version = '1.0.0';
+export const version = '1.0.1';
 
 const TYPES = {
   line: LineChart,
