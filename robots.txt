@@ -1,0 +1,5 @@
+# Everything here is public documentation for an open-source library.
+User-agent: *
+Allow: /
+
+Sitemap: https://particlecharts.com/sitemap.xml

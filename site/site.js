@@ -476,13 +476,24 @@
      sticky. Freeze them while the wheel is moving and resume just after it
      stops — the particles hold their last frame for a moment, which nobody
      notices, and the main thread is left to the scroll. */
+  /* WCAG 2.2.2 wants a way to stop motion that runs indefinitely. The library
+     already honours prefers-reduced-motion, but that is an OS-level setting;
+     this is the on-page control for everyone else. Pausing just cancels the
+     animation frame, so every chart holds its last painted frame. */
+  var motionPaused = false;
+
+  function applyMotion() {
+    demoCharts.forEach(function (c) { motionPaused ? c.stop() : c.start(); });
+  }
+
   var scrollTimer = null;
   window.addEventListener('scroll', function () {
     if (scrollTimer === null) demoCharts.forEach(function (c) { c.stop(); });
     else clearTimeout(scrollTimer);
     scrollTimer = setTimeout(function () {
       scrollTimer = null;
-      demoCharts.forEach(function (c) { c.start(); });
+      // Never resume behind the reader's back if they asked for stillness.
+      if (!motionPaused) demoCharts.forEach(function (c) { c.start(); });
     }, 140);
   }, { passive: true });
 
@@ -490,6 +501,17 @@
 
   var pill = document.getElementById('version-pill');
   if (pill && PC.version) pill.textContent = 'v' + PC.version;
+
+  var motionBtn = document.getElementById('motion-toggle');
+  if (motionBtn) {
+    motionBtn.addEventListener('click', function () {
+      motionPaused = !motionPaused;
+      motionBtn.setAttribute('aria-pressed', String(motionPaused));
+      motionBtn.setAttribute('aria-label',
+        motionPaused ? 'Resume chart animation' : 'Pause chart animation');
+      applyMotion();
+    });
+  }
 
   var themeBtn = document.getElementById('theme-toggle');
 
@@ -507,6 +529,7 @@
     labelTheme();
     buildDemos();
     buildPlay();
+    applyMotion();
   });
 
   /* Follow the OS only for as long as the reader has not made a choice here. */

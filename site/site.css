@@ -8,9 +8,12 @@
   --surface-2: #0f1219;
   --line: rgba(255, 255, 255, 0.075);
   --line-strong: rgba(255, 255, 255, 0.14);
+  /* Boundaries that identify an interactive control, which WCAG 1.4.11 holds
+     to 3:1. --line/--line-strong stay decorative and deliberately faint. */
+  --line-control: rgba(255, 255, 255, 0.36);
   --text: #eef1f6;
   --text-2: #a6adba;
-  --text-3: #6f7889;
+  --text-3: #778090;
   --accent: #2ff0d6;
   --nav-bg: rgba(5, 6, 9, 0.94);
   --hover: rgba(255, 255, 255, 0.05);
@@ -26,7 +29,7 @@
   --code-k: #9fb4ff;
   --code-s: #a5e6b8;
   --code-n: #ffd9a0;
-  --code-c: #5b6373;
+  --code-c: #79808d;
   --code-p: #e8edf6;
   --code-f: #ffffff;
   --radius: 14px;
@@ -44,9 +47,10 @@
   --surface-2: #f5f7fa;
   --line: rgba(22, 26, 34, 0.1);
   --line-strong: rgba(22, 26, 34, 0.2);
+  --line-control: rgba(22, 26, 34, 0.5);
   --text: #14181f;
   --text-2: #4d5666;
-  --text-3: #79828f;
+  --text-3: #686f7b;
   --accent: #0e9c88;
   --nav-bg: rgba(251, 251, 253, 0.94);
   --hover: rgba(22, 26, 34, 0.05);
@@ -61,12 +65,23 @@
   --code-k: #4b56c4;
   --code-s: #157a4d;
   --code-n: #a35a00;
-  --code-c: #8a93a1;
+  --code-c: #686f7a;
   --code-p: #2b3240;
   --code-f: #14181f;
 }
 
 * { box-sizing: border-box; }
+
+/* 2.4.7 — the browser default ring is a 1px light blue that all but vanishes
+   on the white primary button. One token-driven ring instead, on everything
+   focusable. :focus-visible keeps it off mouse clicks. The halo underneath
+   guarantees the ring reads even when it lands on an accent-coloured surface.
+   No border-radius here: that would reshape the element it is ringing. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px var(--bg);
+}
 
 html { scroll-behavior: smooth; }
 
@@ -108,6 +123,35 @@ p { margin: 0; }
   font-weight: 500;
 }
 
+/* 2.4.1 — off-screen until focused, then it parks itself below the sticky
+   header so the sticky bar cannot cover it (2.4.11). */
+.skip-link {
+  /* fixed, not absolute: an absolutely positioned link sits at the document
+     top and is off-screen the moment the page is scrolled. */
+  position: fixed;
+  left: 50%;
+  top: 8px;
+  transform: translate(-50%, -140%);
+  z-index: 100;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: var(--invert-bg);
+  color: var(--invert-fg);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: transform .18s ease;
+}
+/* :focus, not :focus-visible — a skip link must appear for any focus that
+   reaches it, including programmatic focus and browsers that withhold the
+   -visible heuristic on the first element of the page. */
+.skip-link:focus { transform: translate(-50%, 0); }
+
+/* 2.1.1 — a region that scrolls must be reachable from the keyboard. These
+   carry tabindex="0" in the markup; this just makes the focus legible. */
+pre.code:focus-visible,
+.table-wrap:focus-visible { outline-offset: 2px; }
+
 /* ---------------------------------------------------------------- nav ---- */
 
 header.nav {
@@ -145,7 +189,7 @@ header.nav {
   height: 32px;
   margin-left: 4px;
   padding: 0;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-control);
   border-radius: 8px;
   background: transparent;
   color: var(--text-2);
@@ -153,6 +197,11 @@ header.nav {
   transition: color .18s ease, background .18s ease, border-color .18s ease;
 }
 .theme-toggle:hover { color: var(--text); background: var(--hover); border-color: var(--line-strong); }
+/* 2.2.2 — a mechanism to stop the particle drift, for anyone who has not set
+   prefers-reduced-motion at the OS level. */
+.motion-toggle .ico-play { display: none; }
+.motion-toggle[aria-pressed="true"] .ico-play { display: block; }
+.motion-toggle[aria-pressed="true"] .ico-pause { display: none; }
 .theme-toggle svg { width: 16px; height: 16px; display: block; }
 .theme-toggle .ico-moon { display: none; }
 :root[data-theme="light"] .theme-toggle .ico-sun { display: none; }
@@ -208,7 +257,7 @@ header.nav {
 .btn:active { transform: translateY(1px); }
 .btn-primary { background: var(--invert-bg); color: var(--invert-fg); }
 .btn-primary:hover { background: var(--invert-bg-hover); }
-.btn-ghost { border-color: var(--line-strong); color: var(--text); }
+.btn-ghost { border-color: var(--line-control); color: var(--text); }
 .btn-ghost:hover { background: var(--hover); }
 
 .hero-chart {
@@ -271,6 +320,7 @@ section { padding: 80px 0; position: relative; z-index: 1; }
   border-radius: var(--radius);
   padding: 18px;
 }
+.panel h3,
 .panel h4 {
   margin: 0 0 14px;
   font-size: 11px;
@@ -301,17 +351,34 @@ section { padding: 80px 0; position: relative; z-index: 1; }
 .ctrl label { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-2); margin-bottom: 7px; }
 .ctrl label b { font-family: var(--mono); font-weight: 500; color: var(--text); font-size: 12px; }
 
+/* The visible track is 3px, but a 3px-tall input is a 3px-tall pointer target.
+   The element is given a full 24px of height (WCAG 2.5.8) with a transparent
+   background, and the hairline is drawn by the track pseudo-elements inside
+   it — same look, a target you can actually hit. */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
+  height: 24px;
+  margin: 0;
+  background: transparent;
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
   height: 3px;
   border-radius: 3px;
-  background: var(--line-strong);
-  outline: none;
+  background: var(--line-control);
+}
+input[type="range"]::-moz-range-track {
+  height: 3px;
+  border-radius: 3px;
+  background: var(--line-control);
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
+  /* Centres the 14px thumb on the 3px track: (3 - 14) / 2. */
+  margin-top: -5.5px;
   width: 14px;
   height: 14px;
   border-radius: 50%;
@@ -322,7 +389,6 @@ input[type="range"]::-webkit-slider-thumb {
 input[type="range"]::-moz-range-thumb {
   width: 14px; height: 14px; border: 0; border-radius: 50%; background: var(--accent); cursor: pointer;
 }
-input[type="range"]:focus-visible { outline: 2px solid var(--text); outline-offset: 4px; }
 
 .toggles { display: flex; flex-wrap: wrap; gap: 8px; }
 .toggle {
@@ -425,7 +491,6 @@ pre.code .f { color: var(--code-f); }
 .shot figcaption span { color: var(--text-3); }
 
 .shot:hover { border-color: var(--line-strong); }
-.shot a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .showcase-cta {
   margin-top: 24px;

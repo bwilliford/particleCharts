@@ -1,0 +1,38 @@
+# Particle Charts
+
+> A zero-dependency JavaScript charting library that renders data as a living
+> cloud of particles on a `<canvas>`. Bar, line, bubble, radar, pie and donut.
+> ~20 kB minified and gzipped, responsive, accessible and typed. MIT licensed.
+
+Particle Charts takes plain JSON and draws it as particles that spring into
+position. Axes, ticks, legends and tooltips are generated from the data. Every
+chart ships a visually hidden data table for screen readers, honours
+`prefers-reduced-motion`, and pauses when scrolled out of view or when the tab
+is hidden.
+
+Install with `npm install particle-charts`, or drop in
+`https://cdn.jsdelivr.net/npm/particle-charts@1/dist/particle-charts.min.js`
+and call `new ParticleCharts.ParticleChart('#el', { type: 'bar', data })`.
+
+## Docs
+
+- [Full documentation in Markdown](https://raw.githubusercontent.com/bwilliford/particleCharts/main/README.md): every option, data shape and method, as raw Markdown
+- [README, rendered](https://github.com/bwilliford/particleCharts/blob/main/README.md): the same document on GitHub
+- [Options reference](https://particlecharts.com/#api): every top-level config key with its default
+- [Quick start](https://particlecharts.com/#start): script tag, npm and ESM usage in three lines
+
+## Interactive
+
+- [Live demo and playground](https://particlecharts.com/#playground): change type, density, size, bloom and jitter and read the generated config
+- [Chart types](https://particlecharts.com/#types): bar, line, bubble, radar, pie and donut, each as the same particle field
+
+## Source
+
+- [GitHub repository](https://github.com/bwilliford/particleCharts): source, issues and releases
+- [npm package](https://www.npmjs.com/package/particle-charts): published builds
+- [TypeScript declarations](https://github.com/bwilliford/particleCharts/blob/main/index.d.ts): full typings for the config object
+
+## Optional
+
+- [Showcase](https://particlecharts.com/#showcase): projects built with the library
+- [MIT licence](https://github.com/bwilliford/particleCharts/blob/main/LICENSE)
